@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Money Tracker - Flask Edition</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="server-status">🟢 Server Connected</div>
+        </div>
+        
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab('transactions')">Transactions</button>
+            <button class="tab" onclick="switchTab('recurring')">Recurring</button>
+            <button class="tab" onclick="switchTab('analytics')">Analytics</button>
+            <button class="tab" onclick="switchTab('settings')">Settings</button>
+        </div>
+
+        <div id="transactions-tab" class="content">
+            <div class="sidebar" id="sidebar">
+                <div class="sidebar-header">
+                    <h3 style="margin-bottom: 15px;">Bank Accounts</h3>
+                    <button class="sidebar-toggle" onclick="toggleSidebar()" id="sidebar-toggle">☰</button>
+                </div>
+                <button class="btn btn-primary" style="width: 100%; margin-bottom: 15px;" onclick="showAddAccountModal()">+ Add Account</button>
+                <div id="accounts-list"></div>
+            </div>
+            
+            <div class="main-content">
+                <div style="background: white; padding: 20px; border-radius: 10px; margin-bottom: 20px;">
+                    <h3 style="margin-bottom: 15px;">Add Transaction</h3>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Account</label>
+                            <select id="account-select"></select>
+                        </div>
+                        <div class="form-group">
+                            <label>Amount (£)</label>
+                            <input type="number" id="amount" step="0.01" placeholder="0.00">
+                        </div>
+                        <div class="form-group">
+                            <label>Date</label>
+                            <input type="date" id="date">
+                        </div>
+                        <div class="form-group">
+                            <label>Type</label>
+                            <select id="type">
+                                <option value="expense">Expense</option>
+                                <option value="income">Income</option>
+                                <option value="transfer">Transfer</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Payee</label>
+                            <input type="text" id="payee" placeholder="Enter payee">
+                        </div>
+                        <div class="form-group">
+                            <label>Category</label>
+                            <select id="category">
+                                <option value="Food">Food & Dining</option>
+                                <option value="Transport">Transportation</option>
+                                <option value="Shopping">Shopping</option>
+                                <option value="Entertainment">Entertainment</option>
+                                <option value="Bills">Bills & Utilities</option>
+                                <option value="Healthcare">Healthcare</option>
+                                <option value="Education">Education</option>
+                                <option value="Salary">Salary</option>
+                                <option value="Investment">Investment</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Notes</label>
+                            <input type="text" id="notes" placeholder="Optional notes">
+                        </div>
+                    </div>
+                    
+                    <div style="margin: 15px 0;">
+                        <input type="checkbox" id="is-recurring" onchange="toggleRecurring()">
+                        <label for="is-recurring">Make this a recurring transaction</label>
+                    </div>
+                    
+                    <div class="recurring-section" id="recurring-section">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Frequency</label>
+                                <select id="frequency">
+                                    <option value="daily">Daily</option>
+                                    <option value="weekly">Weekly</option>
+                                    <option value="biweekly">Bi-weekly</option>
+                                    <option value="monthly" selected>Monthly</option>
+                                    <option value="quarterly">Quarterly</option>
+                                    <option value="yearly">Yearly</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>End Date (Optional)</label>
+                                <input type="date" id="end-date">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <button class="btn btn-primary" onclick="addTransaction()">Add Transaction</button>
+                    <button class="btn btn-secondary" onclick="clearForm()">Clear</button>
+                </div>
+                
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Account</th>
+                            <th>Payee</th>
+                            <th>Category</th>
+                            <th>Amount</th>
+                            <th>Type</th>
+                            <th>Notes</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="transactions-list"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="recurring-tab" class="content hidden">
+            <div class="main-content" style="width: 100%;">
+                <div style="background: white; padding: 20px; border-radius: 10px; margin-bottom: 20px;">
+                    <h3>Recurring Transactions</h3>
+                    <div id="recurring-list" style="margin: 20px 0;"></div>
+                    <button class="btn btn-success" onclick="processRecurring()">Process Due Transactions</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="analytics-tab" class="content hidden">
+            <div class="main-content" style="width: 100%;">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div style="font-size: 12px; color: #6c757d;">Total Balance</div>
+                        <div style="font-size: 24px; font-weight: bold;" id="total-balance">£0.00</div>
+                    </div>
+                    <div class="stat-card">
+                        <div style="font-size: 12px; color: #6c757d;">Monthly Income</div>
+                        <div style="font-size: 24px; font-weight: bold;" id="monthly-income">£0.00</div>
+                    </div>
+                    <div class="stat-card">
+                        <div style="font-size: 12px; color: #6c757d;">Monthly Expenses</div>
+                        <div style="font-size: 24px; font-weight: bold;" id="monthly-expenses">£0.00</div>
+                    </div>
+                    <div class="stat-card">
+                        <div style="font-size: 12px; color: #6c757d;">Net Monthly</div>
+                        <div style="font-size: 24px; font-weight: bold;" id="net-monthly">£0.00</div>
+                    </div>
+                </div>
+                
+                <div class="charts-container">
+                    <div class="chart-card">
+                        <h3>Spending by Category</h3>
+                        <canvas id="categoryChart"></canvas>
+                    </div>
+                    <div class="chart-card">
+                        <h3>Monthly Trend</h3>
+                        <canvas id="trendChart"></canvas>
+                    </div>
+                    <div class="chart-card">
+                        <h3>Account Balances</h3>
+                        <canvas id="accountChart"></canvas>
+                    </div>
+                    <div class="chart-card">
+                        <h3>Income vs Expenses</h3>
+                        <canvas id="incomeExpenseChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="settings-tab" class="content hidden">
+            <div class="main-content" style="width: 100%;">
+                <div style="background: white; padding: 20px; border-radius: 10px;">
+                    <h3>Settings & Data Management</h3>
+                    <div style="margin: 20px 0;">
+                        <h4>Export Data</h4>
+                        <p style="color: #6c757d; margin: 10px 0;">Download your data as a backup file</p>
+                        <button class="btn btn-primary" onclick="exportData()">Export Database</button>
+                    </div>
+                    <div style="margin: 20px 0;">
+                        <h4>Import Data</h4>
+                        <p style="color: #6c757d; margin: 10px 0;">Replace current database with a backup file</p>
+                        <button class="btn btn-secondary" onclick="importData()">Import Database</button>
+                    </div>
+                    <div style="margin: 20px 0;">
+                        <h4>Database Info</h4>
+                        <p style="color: #6c757d;">Database location: money_tracker.db</p>
+                        <p style="color: #6c757d;" id="db-size">Size: Calculating...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Account Modal -->
+    <div id="accountModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal()">&times;</span>
+            <h3>Add New Account</h3>
+            <div class="form-group" style="margin: 15px 0;">
+                <label>Account Name</label>
+                <input type="text" id="new-account-name" style="width: 100%;">
+            </div>
+            <div class="form-group" style="margin: 15px 0;">
+                <label>Account Type</label>
+                <select id="new-account-type" style="width: 100%;">
+                    <option value="checking">Checking</option>
+                    <option value="savings">Savings</option>
+                    <option value="credit">Credit Card</option>
+                    <option value="investment">Investment</option>
+                </select>
+            </div>
+            <div class="form-group" style="margin: 15px 0;">
+                <label>Starting Balance (£)</label>
+                <input type="number" id="new-account-balance" step="0.01" value="0" style="width: 100%;">
+            </div>
+            <button class="btn btn-primary" onclick="addAccount()">Add Account</button>
+        </div>
+    </div>
+
+    <script src="/static/script.js"></script>
+</body>
+</html>
