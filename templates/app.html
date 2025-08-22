@@ -186,13 +186,15 @@
                     <h3>Settings & Data Management</h3>
                     <div style="margin: 20px 0;">
                         <h4>Export Data</h4>
-                        <p style="color: #6c757d; margin: 10px 0;">Download your data as a backup file</p>
+                        <p style="color: #6c757d; margin: 10px 0;">Download your data as a backup or CSV file</p>
                         <button class="btn btn-primary" onclick="exportData()">Export Database</button>
+                        <button class="btn btn-success" onclick="exportCsv()" style="margin-left: 10px;">Export CSV</button>
                     </div>
                     <div style="margin: 20px 0;">
                         <h4>Import Data</h4>
-                        <p style="color: #6c757d; margin: 10px 0;">Replace current database with a backup file</p>
+                        <p style="color: #6c757d; margin: 10px 0;">Replace current database or import transactions from CSV</p>
                         <button class="btn btn-secondary" onclick="importData()">Import Database</button>
+                        <button class="btn btn-primary" onclick="importCsv()" style="margin-left: 10px;">Import CSV</button>
                     </div>
                     <div style="margin: 20px 0;">
                         <h4>Database Info</h4>

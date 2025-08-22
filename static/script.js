@@ -284,6 +284,10 @@ async function exportData() {
     window.location.href = '/api/export';
 }
 
+async function exportCsv() {
+    window.location.href = '/api/export/csv';
+}
+
 async function importData() {
     const input = document.createElement('input');
     input.type = 'file';
@@ -320,6 +324,47 @@ async function importData() {
             }
         } catch (error) {
             alert('Error importing database: ' + error.message);
+        }
+    };
+    input.click();
+}
+
+async function importCsv() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.csv';
+    input.onchange = async function(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        
+        if (!file.name.toLowerCase().endsWith('.csv')) {
+            alert('Please select a .csv file');
+            return;
+        }
+        
+        if (!confirm('This will import transactions from the CSV file. Existing transactions will not be affected. Continue?')) {
+            return;
+        }
+        
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        try {
+            const response = await fetch('/api/import/csv', {
+                method: 'POST',
+                body: formData
+            });
+            
+            const result = await response.json();
+            
+            if (response.ok) {
+                alert(result.message + '\n\nPage will reload to show imported data.');
+                window.location.reload();
+            } else {
+                alert('Error: ' + result.error);
+            }
+        } catch (error) {
+            alert('Error importing CSV: ' + error.message);
         }
     };
     input.click();

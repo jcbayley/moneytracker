@@ -7,6 +7,7 @@ from datetime import datetime, timedelta
 import json
 import os
 import io
+import csv
 import argparse
 import threading
 import time
@@ -88,9 +89,24 @@ def accounts():
         db.commit()
         return jsonify({'id': cursor.lastrowid, 'message': 'Account created'})
     
-    accounts = db.execute('SELECT * FROM accounts ORDER BY name').fetchall()
+    accounts = db.execute('SELECT * FROM accounts ORDER BY type, name').fetchall()
     db.close()
     return jsonify([dict(row) for row in accounts])
+
+@app.route('/api/accounts/<int:id>', methods=['PUT'])
+def update_account(id):
+    """Update an account"""
+    db = get_db()
+    data = request.json
+    
+    db.execute(
+        'UPDATE accounts SET name = ?, type = ? WHERE id = ?',
+        (data['name'], data['type'], id)
+    )
+    db.commit()
+    db.close()
+    
+    return jsonify({'message': 'Account updated'})
 
 @app.route('/api/transactions', methods=['GET', 'POST'])
 def transactions():
@@ -451,6 +467,142 @@ def import_database():
         
     except Exception as e:
         return jsonify({'error': f'Failed to import database: {str(e)}'}), 500
+
+@app.route('/api/export/csv')
+def export_csv():
+    """Export transactions to CSV format"""
+    db = get_db()
+    
+    # Get all transactions with account names
+    transactions = db.execute('''
+        SELECT 
+            a.name as Account,
+            t.date as Date,
+            COALESCE(t.payee, '') as Payee,
+            COALESCE(t.notes, '') as Notes,
+            COALESCE(t.category, '') as Category,
+            t.amount as Amount
+        FROM transactions t
+        JOIN accounts a ON t.account_id = a.id
+        ORDER BY t.date DESC, t.id DESC
+    ''').fetchall()
+    
+    db.close()
+    
+    # Create CSV in memory
+    output = io.StringIO()
+    writer = csv.writer(output)
+    
+    # Write header
+    writer.writerow(['Account', 'Date', 'Payee', 'Notes', 'Category', 'Amount'])
+    
+    # Write data
+    for row in transactions:
+        writer.writerow([row['Account'], row['Date'], row['Payee'], row['Notes'], row['Category'], row['Amount']])
+    
+    # Convert to bytes
+    csv_data = output.getvalue().encode('utf-8')
+    output.close()
+    
+    # Return as file download
+    return send_file(
+        io.BytesIO(csv_data),
+        mimetype='text/csv',
+        as_attachment=True,
+        download_name=f'money_tracker_transactions_{datetime.now().strftime("%Y%m%d_%H%M%S")}.csv'
+    )
+
+@app.route('/api/import/csv', methods=['POST'])
+def import_csv():
+    """Import transactions from CSV format"""
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file provided'}), 400
+    
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({'error': 'No file selected'}), 400
+    
+    if not file.filename.lower().endswith('.csv'):
+        return jsonify({'error': 'File must be a .csv file'}), 400
+    
+    try:
+        db = get_db()
+        
+        # Read CSV content
+        csv_content = file.read().decode('utf-8')
+        csv_reader = csv.DictReader(io.StringIO(csv_content))
+        
+        imported_count = 0
+        skipped_count = 0
+        
+        # Get existing accounts for mapping
+        accounts = {row['name']: row['id'] for row in db.execute('SELECT id, name FROM accounts').fetchall()}
+        
+        for row in csv_reader:
+            try:
+                # Map CSV columns (case-insensitive)
+                account_name = row.get('Account', '').strip()
+                date = row.get('Date', '').strip()
+                payee = row.get('Payee', '').strip() or None
+                notes = row.get('Notes', '').strip() or None
+                category = row.get('Category', '').strip() or None
+                amount = float(row.get('Amount', 0))
+                
+                # Skip empty rows
+                if not account_name or not date or amount == 0:
+                    skipped_count += 1
+                    continue
+                
+                # Find or create account
+                account_id = None
+                if account_name in accounts:
+                    account_id = accounts[account_name]
+                else:
+                    # Create new account
+                    cursor = db.execute(
+                        'INSERT INTO accounts (name, type, balance) VALUES (?, ?, ?)',
+                        (account_name, 'checking', 0)
+                    )
+                    account_id = cursor.lastrowid
+                    accounts[account_name] = account_id
+                
+                # Determine transaction type based on amount
+                trans_type = 'income' if amount > 0 else 'expense'
+                
+                # Insert transaction
+                db.execute('''
+                    INSERT INTO transactions 
+                    (account_id, amount, date, type, payee, category, notes)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                ''', (account_id, amount, date, trans_type, payee, category, notes))
+                
+                # Update account balance
+                db.execute(
+                    'UPDATE accounts SET balance = balance + ? WHERE id = ?',
+                    (amount, account_id)
+                )
+                
+                imported_count += 1
+                
+            except (ValueError, KeyError) as e:
+                skipped_count += 1
+                continue
+        
+        db.commit()
+        db.close()
+        
+        message = f'Successfully imported {imported_count} transactions'
+        if skipped_count > 0:
+            message += f', skipped {skipped_count} invalid rows'
+        
+        return jsonify({
+            'message': message,
+            'imported': imported_count,
+            'skipped': skipped_count
+        })
+        
+    except Exception as e:
+        return jsonify({'error': f'Failed to import CSV: {str(e)}'}), 500
 
 def run_desktop_app():
     """Run the app in a desktop window using webview"""
