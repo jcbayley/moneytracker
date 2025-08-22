@@ -65,6 +65,21 @@ def init_db():
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (account_id) REFERENCES accounts (id)
         );
+        
+        CREATE TABLE IF NOT EXISTS payees (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL UNIQUE,
+            is_account INTEGER DEFAULT 0,
+            account_id INTEGER,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (account_id) REFERENCES accounts (id)
+        );
+        
+        CREATE TABLE IF NOT EXISTS categories (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL UNIQUE,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
     ''')
     
     db.commit()
@@ -107,6 +122,51 @@ def update_account(id):
     db.close()
     
     return jsonify({'message': 'Account updated'})
+
+@app.route('/api/payees', methods=['GET', 'POST'])
+def payees():
+    """Handle payee operations"""
+    db = get_db()
+    
+    if request.method == 'POST':
+        data = request.json
+        try:
+            db.execute('INSERT INTO payees (name) VALUES (?)', (data['name'],))
+            db.commit()
+            return jsonify({'message': 'Payee created'})
+        except sqlite3.IntegrityError:
+            return jsonify({'message': 'Payee already exists'})
+    
+    # Get all payees including account-based payees
+    payees = db.execute('''
+        SELECT p.name, p.is_account, p.account_id
+        FROM payees p
+        UNION
+        SELECT a.name, 1 as is_account, a.id as account_id
+        FROM accounts a
+        ORDER BY name
+    ''').fetchall()
+    
+    db.close()
+    return jsonify([dict(row) for row in payees])
+
+@app.route('/api/categories', methods=['GET', 'POST'])  
+def categories():
+    """Handle category operations"""
+    db = get_db()
+    
+    if request.method == 'POST':
+        data = request.json
+        try:
+            db.execute('INSERT INTO categories (name) VALUES (?)', (data['name'],))
+            db.commit()
+            return jsonify({'message': 'Category created'})
+        except sqlite3.IntegrityError:
+            return jsonify({'message': 'Category already exists'})
+    
+    categories = db.execute('SELECT name FROM categories ORDER BY name').fetchall()
+    db.close()
+    return jsonify([row['name'] for row in categories])
 
 @app.route('/api/transactions', methods=['GET', 'POST'])
 def transactions():
@@ -789,6 +849,10 @@ def import_csv():
         # Get existing accounts for mapping
         accounts = {row['name']: row['id'] for row in db.execute('SELECT id, name FROM accounts').fetchall()}
         
+        # Track payees and categories for bulk insert
+        payees_to_add = set()
+        categories_to_add = set()
+        
         # First pass: collect all rows to detect transfers
         all_rows = []
         for row in csv_reader:
@@ -844,6 +908,12 @@ def import_csv():
                     skipped_count += 1
                     continue
                 
+                # Collect payees and categories
+                if payee:
+                    payees_to_add.add(payee)
+                if category:
+                    categories_to_add.add(category)
+                
                 # Find or create account
                 account_id = None
                 if account_name in accounts:
@@ -881,6 +951,19 @@ def import_csv():
             except (ValueError, KeyError) as e:
                 skipped_count += 1
                 continue
+        
+        # Bulk insert payees and categories
+        for payee in payees_to_add:
+            try:
+                db.execute('INSERT OR IGNORE INTO payees (name) VALUES (?)', (payee,))
+            except:
+                pass
+        
+        for category in categories_to_add:
+            try:
+                db.execute('INSERT OR IGNORE INTO categories (name) VALUES (?)', (category,))
+            except:
+                pass
         
         db.commit()
         db.close()

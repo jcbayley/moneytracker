@@ -3,15 +3,23 @@ let charts = {};
 let editingAccountId = null;
 let editingTransactionId = null;
 let currentAnalyticsMonth = new Date();
+let payeesList = [];
+let dropdownTimeout = null;
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('date').valueAsDate = new Date();
     loadAccounts();
+    loadPayees();
+    loadCategories();
     loadTransactions();
     loadRecurringTransactions();
     updateAnalytics();
     getDatabaseInfo();
+    
+    // Load theme preference
+    const savedTheme = localStorage.getItem('theme') || 'light';
+    setTheme(savedTheme);
     
     // Handle window resize for chart responsiveness
     window.addEventListener('resize', debounce(function() {
@@ -142,6 +150,53 @@ async function loadAccounts() {
     });
 }
 
+async function loadPayees() {
+    const payees = await apiCall('/api/payees');
+    payeesList = payees; // Store for search functionality
+}
+
+async function loadCategories() {
+    const categories = await apiCall('/api/categories');
+    const categorySelects = [
+        document.getElementById('category'),
+        document.getElementById('transaction-category-filter'),
+        document.getElementById('edit-transaction-category')
+    ];
+    
+    categorySelects.forEach(select => {
+        if (!select) return;
+        
+        const isFilter = select.id === 'transaction-category-filter';
+        const currentValue = select.value;
+        
+        select.innerHTML = '';
+        
+        if (isFilter) {
+            select.innerHTML = '<option value="">All Categories</option>';
+        }
+        
+        // Add categories from database
+        categories.forEach(category => {
+            const option = document.createElement('option');
+            option.value = category;
+            option.textContent = category;
+            select.appendChild(option);
+        });
+        
+        if (!isFilter) {
+            const customOption = document.createElement('option');
+            customOption.value = 'custom';
+            customOption.textContent = '+ Add New Category';
+            select.appendChild(customOption);
+        }
+        
+        // Restore previous value if it exists
+        if (currentValue) {
+            select.value = currentValue;
+        }
+    });
+}
+
 async function loadTransactions() {
     // Build query parameters
     const params = new URLSearchParams();
@@ -243,14 +298,20 @@ async function addTransaction() {
     if (category === 'custom') {
         category = prompt('Enter new category name:');
         if (!category) return;
+        // Add to database
+        await apiCall('/api/categories', 'POST', { name: category });
+        loadCategories();
     }
+    
+    // Get payee value
+    let payee = document.getElementById('payee').value;
     
     const data = {
         account_id: document.getElementById('account-select').value,
         amount: parseFloat(document.getElementById('amount').value),
         date: document.getElementById('date').value,
         type: document.getElementById('type').value,
-        payee: document.getElementById('payee').value,
+        payee: payee,
         category: category,
         notes: document.getElementById('notes').value,
         is_recurring: document.getElementById('is-recurring').checked,
@@ -645,6 +706,7 @@ function clearForm() {
     document.getElementById('notes').value = '';
     document.getElementById('date').valueAsDate = new Date();
     document.getElementById('type').value = 'expense';
+    document.getElementById('category').value = '';
     document.getElementById('is-recurring').checked = false;
     document.getElementById('recurring-section').classList.remove('active');
     
@@ -740,14 +802,19 @@ async function updateTransaction() {
     if (category === 'custom') {
         category = prompt('Enter new category name:');
         if (!category) return;
+        await apiCall('/api/categories', 'POST', { name: category });
+        loadCategories();
     }
+    
+    // Get payee value
+    let payee = document.getElementById('edit-transaction-payee').value;
     
     const data = {
         account_id: parseInt(document.getElementById('edit-transaction-account').value),
         amount: parseFloat(document.getElementById('edit-transaction-amount').value),
         date: document.getElementById('edit-transaction-date').value,
         type: document.getElementById('edit-transaction-type').value,
-        payee: document.getElementById('edit-transaction-payee').value,
+        payee: payee,
         category: category,
         notes: document.getElementById('edit-transaction-notes').value
     };
@@ -789,6 +856,7 @@ function toggleEditTransferFields() {
     const transferRow = document.getElementById('edit-transfer-row');
     transferRow.style.display = type === 'transfer' ? 'flex' : 'none';
 }
+
 
 function toggleSidebar() {
     const sidebar = document.getElementById('sidebar');
@@ -850,6 +918,209 @@ async function showCategoryDetails(category) {
 
 function closeCategoryModal() {
     document.getElementById('categoryDetailsModal').style.display = 'none';
+}
+
+// Theme Functions
+function toggleTheme() {
+    const currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
+    const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+    setTheme(newTheme);
+    localStorage.setItem('theme', newTheme);
+}
+
+function setTheme(theme) {
+    document.documentElement.setAttribute('data-theme', theme);
+    const toggle = document.querySelector('.theme-toggle');
+    if (toggle) {
+        toggle.textContent = theme === 'dark' ? '☀️' : '🌙';
+    }
+}
+
+// Searchable Dropdown Functions
+function showPayeeDropdown() {
+    clearTimeout(dropdownTimeout);
+    populatePayeeDropdown('');
+    document.getElementById('payee-dropdown').style.display = 'block';
+}
+
+function hidePayeeDropdown() {
+    dropdownTimeout = setTimeout(() => {
+        document.getElementById('payee-dropdown').style.display = 'none';
+    }, 200);
+}
+
+function showEditPayeeDropdown() {
+    clearTimeout(dropdownTimeout);
+    populateEditPayeeDropdown('');
+    document.getElementById('edit-payee-dropdown').style.display = 'block';
+}
+
+function hideEditPayeeDropdown() {
+    dropdownTimeout = setTimeout(() => {
+        document.getElementById('edit-payee-dropdown').style.display = 'none';
+    }, 200);
+}
+
+function filterPayees() {
+    const input = document.getElementById('payee');
+    const filter = input.value.toLowerCase();
+    populatePayeeDropdown(filter);
+}
+
+function filterEditPayees() {
+    const input = document.getElementById('edit-transaction-payee');
+    const filter = input.value.toLowerCase();
+    populateEditPayeeDropdown(filter);
+}
+
+function populatePayeeDropdown(filter) {
+    const dropdown = document.getElementById('payee-dropdown');
+    dropdown.innerHTML = '';
+    
+    // Filter payees
+    const accountPayees = payeesList.filter(p => p.is_account && p.name.toLowerCase().includes(filter));
+    const regularPayees = payeesList.filter(p => !p.is_account && p.name.toLowerCase().includes(filter));
+    
+    // Add account payees
+    accountPayees.forEach(payee => {
+        const item = document.createElement('div');
+        item.className = 'dropdown-item transfer';
+        item.textContent = `${payee.name} (Transfer)`;
+        item.onclick = () => selectPayee(payee.name, true, payee.account_id);
+        dropdown.appendChild(item);
+    });
+    
+    if (accountPayees.length > 0 && regularPayees.length > 0) {
+        const separator = document.createElement('div');
+        separator.className = 'dropdown-item separator';
+        separator.textContent = '────────────';
+        dropdown.appendChild(separator);
+    }
+    
+    // Add regular payees
+    regularPayees.forEach(payee => {
+        const item = document.createElement('div');
+        item.className = 'dropdown-item';
+        item.textContent = payee.name;
+        item.onclick = () => selectPayee(payee.name, false);
+        dropdown.appendChild(item);
+    });
+    
+    // Add new payee option
+    const addNew = document.createElement('div');
+    addNew.className = 'dropdown-item add-new';
+    addNew.textContent = '+ Add New Payee';
+    addNew.onclick = () => addNewPayee();
+    dropdown.appendChild(addNew);
+}
+
+function populateEditPayeeDropdown(filter) {
+    const dropdown = document.getElementById('edit-payee-dropdown');
+    dropdown.innerHTML = '';
+    
+    // Filter payees
+    const accountPayees = payeesList.filter(p => p.is_account && p.name.toLowerCase().includes(filter));
+    const regularPayees = payeesList.filter(p => !p.is_account && p.name.toLowerCase().includes(filter));
+    
+    // Add account payees
+    accountPayees.forEach(payee => {
+        const item = document.createElement('div');
+        item.className = 'dropdown-item transfer';
+        item.textContent = `${payee.name} (Transfer)`;
+        item.onclick = () => selectEditPayee(payee.name, true, payee.account_id);
+        dropdown.appendChild(item);
+    });
+    
+    if (accountPayees.length > 0 && regularPayees.length > 0) {
+        const separator = document.createElement('div');
+        separator.className = 'dropdown-item separator';
+        separator.textContent = '────────────';
+        dropdown.appendChild(separator);
+    }
+    
+    // Add regular payees
+    regularPayees.forEach(payee => {
+        const item = document.createElement('div');
+        item.className = 'dropdown-item';
+        item.textContent = payee.name;
+        item.onclick = () => selectEditPayee(payee.name, false);
+        dropdown.appendChild(item);
+    });
+    
+    // Add new payee option
+    const addNew = document.createElement('div');
+    addNew.className = 'dropdown-item add-new';
+    addNew.textContent = '+ Add New Payee';
+    addNew.onclick = () => addNewEditPayee();
+    dropdown.appendChild(addNew);
+}
+
+function selectPayee(name, isAccount, accountId = null) {
+    const payeeInput = document.getElementById('payee');
+    const typeSelect = document.getElementById('type');
+    const transferRow = document.getElementById('transfer-row');
+    const transferAccount = document.getElementById('transfer-account');
+    
+    payeeInput.value = name;
+    
+    if (isAccount) {
+        typeSelect.value = 'transfer';
+        transferAccount.value = accountId;
+        transferRow.style.display = 'flex';
+    } else if (typeSelect.value === 'transfer') {
+        typeSelect.value = 'expense';
+        transferRow.style.display = 'none';
+    }
+    
+    document.getElementById('payee-dropdown').style.display = 'none';
+}
+
+function selectEditPayee(name, isAccount, accountId = null) {
+    const payeeInput = document.getElementById('edit-transaction-payee');
+    const typeSelect = document.getElementById('edit-transaction-type');
+    const transferRow = document.getElementById('edit-transfer-row');
+    const transferAccount = document.getElementById('edit-transfer-account');
+    
+    payeeInput.value = name;
+    
+    if (isAccount) {
+        typeSelect.value = 'transfer';
+        transferAccount.value = accountId;
+        transferRow.style.display = 'flex';
+    } else if (typeSelect.value === 'transfer') {
+        typeSelect.value = 'expense';
+        transferRow.style.display = 'none';
+    }
+    
+    document.getElementById('edit-payee-dropdown').style.display = 'none';
+}
+
+function addNewPayee() {
+    const newPayee = prompt('Enter new payee name:');
+    if (newPayee) {
+        apiCall('/api/payees', 'POST', { name: newPayee }).then(() => {
+            loadPayees().then(() => {
+                document.getElementById('payee').value = newPayee;
+                document.getElementById('payee-dropdown').style.display = 'none';
+            });
+        });
+    } else {
+        document.getElementById('payee-dropdown').style.display = 'none';
+    }
+}
+
+function addNewEditPayee() {
+    const newPayee = prompt('Enter new payee name:');
+    if (newPayee) {
+        apiCall('/api/payees', 'POST', { name: newPayee }).then(() => {
+            loadPayees().then(() => {
+                document.getElementById('edit-transaction-payee').value = newPayee;
+                document.getElementById('edit-payee-dropdown').style.display = 'none';
+            });
+        });
+    } else {
+        document.getElementById('edit-payee-dropdown').style.display = 'none';
+    }
 }
 
 // Utility function for debouncing

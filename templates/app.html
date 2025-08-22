@@ -11,6 +11,7 @@
     <div class="container">
         <div class="header">
             <div class="server-status">🟢 Server Connected</div>
+            <div class="theme-toggle" onclick="toggleTheme()" title="Toggle Dark/Light Theme">🌙</div>
         </div>
         
         <div class="tabs">
@@ -115,7 +116,11 @@
                     <div class="form-row">
                         <div class="form-group">
                             <label>Payee</label>
-                            <input type="text" id="payee" placeholder="Enter payee">
+                            <div class="searchable-select">
+                                <input type="text" id="payee" placeholder="Type to search or select payee..." 
+                                       autocomplete="off" onkeyup="filterPayees()" onclick="showPayeeDropdown()" onblur="hidePayeeDropdown()">
+                                <div id="payee-dropdown" class="dropdown-content" style="display: none;"></div>
+                            </div>
                         </div>
                         <div class="form-group">
                             <label>Category</label>
@@ -397,7 +402,11 @@
             <div class="form-row">
                 <div class="form-group">
                     <label>Payee</label>
-                    <input type="text" id="edit-transaction-payee">
+                    <div class="searchable-select">
+                        <input type="text" id="edit-transaction-payee" placeholder="Type to search or select payee..." 
+                               autocomplete="off" onkeyup="filterEditPayees()" onclick="showEditPayeeDropdown()" onblur="hideEditPayeeDropdown()">
+                        <div id="edit-payee-dropdown" class="dropdown-content" style="display: none;"></div>
+                    </div>
                 </div>
                 <div class="form-group">
                     <label>Category</label>

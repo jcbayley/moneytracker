@@ -31,13 +31,32 @@ body {
 
 .server-status {
     position: absolute;
-    right: 20px;
+    right: 80px;
     top: 50%;
     transform: translateY(-50%);
     padding: 8px 15px;
     background: rgba(40, 167, 69, 0.3);
     border-radius: 20px;
     font-size: 12px;
+}
+
+.theme-toggle {
+    position: absolute;
+    right: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+    padding: 8px 12px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+    font-size: 16px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    user-select: none;
+}
+
+.theme-toggle:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: translateY(-50%) scale(1.1);
 }
 
 .tabs {
@@ -286,8 +305,10 @@ tr:hover {
 
 .charts-container {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    grid-template-columns: repeat(2, 1fr);
+    grid-template-rows: repeat(2, 1fr);
     gap: 20px;
+    min-height: 600px;
 }
 
 .chart-card {
@@ -354,10 +375,203 @@ tr:hover {
     border-radius: 5px;
 }
 
+/* Searchable Select Dropdown */
+.searchable-select {
+    position: relative;
+}
+
+.dropdown-content {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: white;
+    border: 1px solid #dee2e6;
+    border-top: none;
+    border-radius: 0 0 6px 6px;
+    max-height: 200px;
+    overflow-y: auto;
+    z-index: 1000;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.dropdown-item {
+    padding: 8px 12px;
+    cursor: pointer;
+    border-bottom: 1px solid #f1f3f4;
+    transition: background-color 0.2s;
+}
+
+.dropdown-item:hover {
+    background-color: #f8f9fa;
+}
+
+.dropdown-item.transfer {
+    color: #667eea;
+    font-weight: 500;
+}
+
+.dropdown-item.separator {
+    background: #f8f9fa;
+    color: #6c757d;
+    font-size: 12px;
+    text-align: center;
+    padding: 4px;
+    cursor: default;
+}
+
+.dropdown-item.add-new {
+    color: #28a745;
+    font-weight: 500;
+    border-top: 1px solid #dee2e6;
+}
+
+.dropdown-item.add-new:hover {
+    background-color: #d4edda;
+}
+
+/* Dark Theme */
+[data-theme="dark"] {
+    --bg-primary: #1a1a1a;
+    --bg-secondary: #2d2d2d;
+    --bg-tertiary: #3d3d3d;
+    --text-primary: #ffffff;
+    --text-secondary: #b0b0b0;
+    --border-color: #404040;
+    --accent-color: #667eea;
+}
+
+[data-theme="dark"] body {
+    background: linear-gradient(135deg, #2d2d2d 0%, #1a1a1a 100%);
+    color: var(--text-primary);
+}
+
+[data-theme="dark"] .container {
+    background: rgba(45, 45, 45, 0.95);
+}
+
+[data-theme="dark"] .header {
+    background: linear-gradient(135deg, #404040 0%, #2d2d2d 100%);
+}
+
+[data-theme="dark"] .tabs {
+    background: var(--bg-secondary);
+    border-bottom-color: var(--border-color);
+}
+
+[data-theme="dark"] .tab {
+    color: var(--text-secondary);
+}
+
+[data-theme="dark"] .tab:hover {
+    background: var(--bg-tertiary);
+}
+
+[data-theme="dark"] .tab.active {
+    background: var(--bg-primary);
+    color: var(--accent-color);
+    border-bottom-color: var(--accent-color);
+}
+
+[data-theme="dark"] .sidebar {
+    background: var(--bg-secondary);
+    border-right-color: var(--border-color);
+}
+
+[data-theme="dark"] .account-item {
+    background: var(--bg-primary);
+    color: var(--text-primary);
+}
+
+[data-theme="dark"] .account-item:hover {
+    background: var(--accent-color);
+    color: white;
+}
+
+[data-theme="dark"] .main-content > div[style*="background: white"] {
+    background: var(--bg-secondary) !important;
+    color: var(--text-primary);
+}
+
+[data-theme="dark"] .form-group label {
+    color: var(--text-secondary);
+}
+
+[data-theme="dark"] .form-group input,
+[data-theme="dark"] .form-group select {
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+    border-color: var(--border-color);
+}
+
+[data-theme="dark"] .form-group input:focus,
+[data-theme="dark"] .form-group select:focus {
+    border-color: var(--accent-color);
+    outline: none;
+}
+
+[data-theme="dark"] table {
+    background: var(--bg-secondary);
+}
+
+[data-theme="dark"] th {
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+}
+
+[data-theme="dark"] td {
+    color: var(--text-primary);
+    border-bottom-color: var(--border-color);
+}
+
+[data-theme="dark"] tr:hover {
+    background: var(--bg-tertiary);
+}
+
+[data-theme="dark"] .stat-card {
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+}
+
+[data-theme="dark"] .chart-card {
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+}
+
+[data-theme="dark"] .modal-content {
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    border-color: var(--border-color);
+}
+
+[data-theme="dark"] .dropdown-content {
+    background: var(--bg-secondary);
+    border-color: var(--border-color);
+}
+
+[data-theme="dark"] .dropdown-item {
+    color: var(--text-primary);
+    border-bottom-color: var(--border-color);
+}
+
+[data-theme="dark"] .dropdown-item:hover {
+    background: var(--bg-tertiary);
+}
+
+[data-theme="dark"] .theme-toggle {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+[data-theme="dark"] .theme-toggle:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
 /* Responsive Design */
 @media (max-width: 1200px) {
     .charts-container {
-        grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+        grid-template-columns: 1fr;
+        grid-template-rows: repeat(4, 400px);
+        min-height: auto;
     }
 }
 
