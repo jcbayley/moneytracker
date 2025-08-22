@@ -131,40 +131,177 @@ def transactions():
         else:
             recurring_id = None
         
-        # Add transaction
-        db.execute('''
-            INSERT INTO transactions 
-            (account_id, amount, date, type, payee, category, notes, recurring_id)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        ''', (
-            data['account_id'], data['amount'], data['date'], data['type'],
-            data.get('payee'), data.get('category'), data.get('notes'), recurring_id
-        ))
+        # Handle transfer - create dual transactions
+        if data.get('type') == 'transfer' and data.get('transfer_account_id'):
+            transfer_account_id = data['transfer_account_id']
+            amount = abs(data['amount'])  # Always positive for transfers
+            
+            # From account (negative)
+            db.execute('''
+                INSERT INTO transactions 
+                (account_id, amount, date, type, payee, category, notes, recurring_id)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (
+                data['account_id'], -amount, data['date'], 'transfer',
+                data.get('payee'), data.get('category'), data.get('notes'), recurring_id
+            ))
+            
+            # To account (positive) - get destination account name for payee
+            dest_account = db.execute('SELECT name FROM accounts WHERE id = ?', (data['account_id'],)).fetchone()
+            source_payee = dest_account['name'] if dest_account else 'Transfer'
+            
+            db.execute('''
+                INSERT INTO transactions 
+                (account_id, amount, date, type, payee, category, notes, recurring_id)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (
+                transfer_account_id, amount, data['date'], 'transfer',
+                source_payee, data.get('category'), data.get('notes'), recurring_id
+            ))
+            
+            # Update both account balances
+            db.execute(
+                'UPDATE accounts SET balance = balance - ? WHERE id = ?',
+                (amount, data['account_id'])
+            )
+            db.execute(
+                'UPDATE accounts SET balance = balance + ? WHERE id = ?',
+                (amount, transfer_account_id)
+            )
+        else:
+            # Regular transaction
+            db.execute('''
+                INSERT INTO transactions 
+                (account_id, amount, date, type, payee, category, notes, recurring_id)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (
+                data['account_id'], data['amount'], data['date'], data['type'],
+                data.get('payee'), data.get('category'), data.get('notes'), recurring_id
+            ))
+            
+            # Update account balance
+            db.execute(
+                'UPDATE accounts SET balance = balance + ? WHERE id = ?',
+                (data['amount'], data['account_id'])
+            )
         
-        # Update account balance
-        db.execute(
-            'UPDATE accounts SET balance = balance + ? WHERE id = ?',
-            (data['amount'], data['account_id'])
-        )
         db.commit()
         return jsonify({'message': 'Transaction added'})
     
-    # GET request
+    # GET request with filters
     account_id = request.args.get('account_id')
+    category = request.args.get('category')
+    trans_type = request.args.get('type')
+    date_from = request.args.get('date_from')
+    
     query = '''
         SELECT t.*, a.name as account_name, r.frequency
         FROM transactions t
         JOIN accounts a ON t.account_id = a.id
         LEFT JOIN recurring_transactions r ON t.recurring_id = r.id
+        WHERE 1=1
     '''
+    params = []
     
     if account_id:
-        query += f' WHERE t.account_id = {account_id}'
+        query += ' AND t.account_id = ?'
+        params.append(account_id)
+    
+    if category:
+        query += ' AND t.category = ?'
+        params.append(category)
+    
+    if trans_type:
+        query += ' AND t.type = ?'
+        params.append(trans_type)
+    
+    if date_from:
+        query += ' AND t.date >= ?'
+        params.append(date_from)
+    
     query += ' ORDER BY t.date DESC, t.id DESC LIMIT 100'
     
-    transactions = db.execute(query).fetchall()
+    transactions = db.execute(query, params).fetchall()
     db.close()
     return jsonify([dict(row) for row in transactions])
+
+@app.route('/api/transactions/<int:id>', methods=['PUT'])
+def update_transaction(id):
+    """Update a transaction"""
+    db = get_db()
+    data = request.json
+    
+    # Get current transaction details
+    current = db.execute('SELECT account_id, amount, type FROM transactions WHERE id = ?', (id,)).fetchone()
+    if not current:
+        return jsonify({'error': 'Transaction not found'}), 404
+    
+    # Calculate balance adjustments
+    old_amount = current['amount']
+    old_account_id = current['account_id']
+    old_type = current['type']
+    
+    # Handle transfer updates (simplified - just update the single transaction)
+    if data.get('type') == 'transfer' and data.get('transfer_account_id'):
+        # For transfer edits, we'll update this transaction and let the user handle the paired transaction separately
+        # This is a simplified approach - in a full implementation, you'd want to track paired transactions
+        transfer_account_id = data['transfer_account_id']
+        amount = abs(data['amount'])
+        
+        # Determine if this is the source or destination transaction
+        if old_amount < 0:  # This was the source transaction
+            new_amount = -amount
+            # Set payee to destination account name
+            dest_account = db.execute('SELECT name FROM accounts WHERE id = ?', (transfer_account_id,)).fetchone()
+            payee = dest_account['name'] if dest_account else 'Transfer'
+        else:  # This was the destination transaction  
+            new_amount = amount
+            # Set payee to source account name
+            source_account = db.execute('SELECT name FROM accounts WHERE id = ?', (data['account_id'],)).fetchone()
+            payee = source_account['name'] if source_account else 'Transfer'
+        
+        data['payee'] = payee
+    else:
+        # Regular transaction
+        if data['type'] == 'expense':
+            new_amount = -abs(data['amount'])
+        else:
+            new_amount = abs(data['amount'])
+    
+    new_account_id = data['account_id']
+    
+    # Update transaction
+    db.execute('''
+        UPDATE transactions 
+        SET account_id = ?, amount = ?, date = ?, type = ?, payee = ?, category = ?, notes = ?
+        WHERE id = ?
+    ''', (
+        new_account_id, new_amount, data['date'], data['type'],
+        data.get('payee'), data.get('category'), data.get('notes'), id
+    ))
+    
+    # Adjust account balances
+    if old_account_id == new_account_id:
+        # Same account, just adjust the difference
+        balance_diff = new_amount - old_amount
+        db.execute(
+            'UPDATE accounts SET balance = balance + ? WHERE id = ?',
+            (balance_diff, old_account_id)
+        )
+    else:
+        # Different accounts, reverse old and apply new
+        db.execute(
+            'UPDATE accounts SET balance = balance - ? WHERE id = ?',
+            (old_amount, old_account_id)
+        )
+        db.execute(
+            'UPDATE accounts SET balance = balance + ? WHERE id = ?',
+            (new_amount, new_account_id)
+        )
+    
+    db.commit()
+    db.close()
+    return jsonify({'message': 'Transaction updated'})
 
 @app.route('/api/transactions/<int:id>', methods=['DELETE'])
 def delete_transaction(id):
@@ -329,14 +466,14 @@ def get_stats():
         params_income.extend(account_types)
         params_expense.extend(account_types)
     
-    # Income query
+    # Income query (exclude transfers)
     income_query = f'''
         SELECT SUM(t.amount) FROM transactions t
         JOIN accounts a ON t.account_id = a.id
         WHERE t.type = 'income'{date_filter}{account_filter}
     '''
     
-    # Expense query  
+    # Expense query (exclude transfers)
     expense_query = f'''
         SELECT SUM(t.amount) FROM transactions t
         JOIN accounts a ON t.account_id = a.id
@@ -384,7 +521,7 @@ def get_chart_data():
         account_filter = f' AND a.type IN ({",".join(["?" for _ in account_types])})'
         params.extend(account_types)
     
-    # Category spending
+    # Category spending (exclude transfers)
     category_query = f'''
         SELECT t.category, SUM(ABS(t.amount)) as total
         FROM transactions t
@@ -406,7 +543,7 @@ def get_chart_data():
         }]
     }
     
-    # Monthly trend (filtered)
+    # Monthly trend (filtered, exclude transfers)
     trend_query = f'''
         SELECT 
             strftime('%Y-%m', t.date) as month,
@@ -414,7 +551,7 @@ def get_chart_data():
             SUM(CASE WHEN t.type = 'expense' THEN ABS(t.amount) ELSE 0 END) as expenses
         FROM transactions t
         JOIN accounts a ON t.account_id = a.id
-        WHERE 1=1{date_filter}{account_filter}
+        WHERE t.type != 'transfer'{date_filter}{account_filter}
         GROUP BY month
         ORDER BY month DESC
         LIMIT 6
@@ -458,24 +595,62 @@ def get_chart_data():
         }]
     }
     
-    # Income vs Expenses total (filtered)
-    income_expense_query = f'''
+    # Category trends over time (exclude transfers)
+    category_trend_query = f'''
         SELECT 
-            SUM(CASE WHEN t.type = 'income' THEN t.amount ELSE 0 END) as income,
-            SUM(CASE WHEN t.type = 'expense' THEN ABS(t.amount) ELSE 0 END) as expenses
+            strftime('%Y-%m', t.date) as month,
+            t.category,
+            SUM(ABS(t.amount)) as total
         FROM transactions t
         JOIN accounts a ON t.account_id = a.id
-        WHERE 1=1{date_filter}{account_filter}
+        WHERE t.type = 'expense' AND t.category IS NOT NULL{date_filter}{account_filter}
+        GROUP BY month, t.category
+        ORDER BY month DESC, total DESC
     '''
-    totals = db.execute(income_expense_query, params).fetchone()
     
-    income_expense_data = {
-        'labels': ['Income', 'Expenses'],
-        'datasets': [{
-            'data': [totals['income'] or 0, totals['expenses'] or 0],
-            'backgroundColor': ['#36A2EB', '#FF6384']
-        }]
+    category_trends = db.execute(category_trend_query, params).fetchall()
+    
+    # Organize data by category
+    category_data_by_month = {}
+    months = set()
+    categories = set()
+    
+    for row in category_trends:
+        month = row['month']
+        category = row['category']
+        total = row['total']
+        
+        months.add(month)
+        categories.add(category)
+        
+        if category not in category_data_by_month:
+            category_data_by_month[category] = {}
+        category_data_by_month[category][month] = total
+    
+    # Convert to chart format
+    sorted_months = sorted(list(months))[-6:]  # Last 6 months
+    # Show all categories, not just top 5
+    all_categories = sorted(list(categories))
+    
+    category_trend_data = {
+        'labels': sorted_months,
+        'datasets': []
     }
+    
+    colors = ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40', '#FF6384', '#C9CBCF', '#4BC0C0', '#FF6384']
+    
+    for i, category in enumerate(all_categories):
+        data = []
+        for month in sorted_months:
+            data.append(category_data_by_month.get(category, {}).get(month, 0))
+        
+        category_trend_data['datasets'].append({
+            'label': category,
+            'data': data,
+            'borderColor': colors[i % len(colors)],
+            'backgroundColor': colors[i % len(colors)] + '20',
+            'tension': 0.4
+        })
     
     db.close()
     
@@ -483,7 +658,7 @@ def get_chart_data():
         'category': category_data,
         'trend': trend_data,
         'accounts': account_data,
-        'income_expense': income_expense_data
+        'category_trends': category_trend_data
     })
 
 @app.route('/api/database/info')
@@ -614,7 +789,47 @@ def import_csv():
         # Get existing accounts for mapping
         accounts = {row['name']: row['id'] for row in db.execute('SELECT id, name FROM accounts').fetchall()}
         
+        # First pass: collect all rows to detect transfers
+        all_rows = []
         for row in csv_reader:
+            all_rows.append(row)
+        
+        # Group by date and amount to detect transfers
+        transfer_pairs = {}
+        for i, row in enumerate(all_rows):
+            try:
+                account_name = row.get('Account', '').strip()
+                date = row.get('Date', '').strip()
+                payee = row.get('Payee', '').strip()
+                amount = float(row.get('Amount', 0))
+                
+                if not account_name or not date or amount == 0:
+                    continue
+                
+                # Look for opposite amount on same date with matching payee that is an account name
+                key = f"{date}_{abs(amount)}"
+                if key not in transfer_pairs:
+                    transfer_pairs[key] = []
+                transfer_pairs[key].append((i, row, account_name, payee, amount))
+            except:
+                continue
+        
+        # Identify transfers
+        detected_transfers = set()
+        for key, candidates in transfer_pairs.items():
+            if len(candidates) >= 2:
+                for i, (idx1, row1, acc1, payee1, amt1) in enumerate(candidates):
+                    for idx2, row2, acc2, payee2, amt2 in candidates[i+1:]:
+                        # Check if amounts are opposite and payees match account names
+                        if (amt1 == -amt2 and 
+                            ((payee1 == acc2 and payee2 == acc1) or 
+                             (payee1 == acc2 and not payee2) or 
+                             (payee2 == acc1 and not payee1))):
+                            detected_transfers.add(idx1)
+                            detected_transfers.add(idx2)
+        
+        # Second pass: import transactions
+        for i, row in enumerate(all_rows):
             try:
                 # Map CSV columns (case-insensitive)
                 account_name = row.get('Account', '').strip()
@@ -642,8 +857,11 @@ def import_csv():
                     account_id = cursor.lastrowid
                     accounts[account_name] = account_id
                 
-                # Determine transaction type based on amount
-                trans_type = 'income' if amount > 0 else 'expense'
+                # Determine transaction type
+                if i in detected_transfers:
+                    trans_type = 'transfer'
+                else:
+                    trans_type = 'income' if amount > 0 else 'expense'
                 
                 # Insert transaction
                 db.execute('''
@@ -679,6 +897,48 @@ def import_csv():
         
     except Exception as e:
         return jsonify({'error': f'Failed to import CSV: {str(e)}'}), 500
+
+@app.route('/api/analytics/category/<category>')
+def get_category_transactions(category):
+    """Get transactions for a specific category with filters"""
+    db = get_db()
+    
+    # Get query parameters
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+    account_types = request.args.getlist('account_types')
+    
+    # Build filters
+    params = [category]
+    date_filter = ''
+    account_filter = ''
+    
+    if start_date and end_date:
+        date_filter = ' AND t.date BETWEEN ? AND ?'
+        params.extend([start_date, end_date])
+    elif start_date:
+        date_filter = ' AND t.date >= ?'
+        params.append(start_date)
+    elif end_date:
+        date_filter = ' AND t.date <= ?'
+        params.append(end_date)
+    
+    if account_types:
+        account_filter = f' AND a.type IN ({",".join(["?" for _ in account_types])})'
+        params.extend(account_types)
+    
+    query = f'''
+        SELECT t.*, a.name as account_name
+        FROM transactions t
+        JOIN accounts a ON t.account_id = a.id
+        WHERE t.category = ?{date_filter}{account_filter}
+        ORDER BY t.date DESC, t.id DESC
+    '''
+    
+    transactions = db.execute(query, params).fetchall()
+    db.close()
+    
+    return jsonify([dict(row) for row in transactions])
 
 def run_desktop_app():
     """Run the app in a desktop window using webview"""

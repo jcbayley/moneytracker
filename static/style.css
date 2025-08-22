@@ -345,6 +345,15 @@ tr:hover {
     color: #000;
 }
 
+#category-transactions-table table {
+    margin-top: 0;
+}
+
+#category-transactions-table {
+    border: 1px solid #dee2e6;
+    border-radius: 5px;
+}
+
 /* Responsive Design */
 @media (max-width: 1200px) {
     .charts-container {

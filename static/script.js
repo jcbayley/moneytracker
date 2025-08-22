@@ -1,6 +1,7 @@
 let currentAccount = null;
 let charts = {};
 let editingAccountId = null;
+let editingTransactionId = null;
 let currentAnalyticsMonth = new Date();
 
 // Initialize on page load
@@ -45,9 +46,25 @@ async function loadAccounts() {
     const accounts = await apiCall('/api/accounts');
     const accountsList = document.getElementById('accounts-list');
     const accountSelect = document.getElementById('account-select');
+    const transactionAccountFilter = document.getElementById('transaction-account-filter');
+    const editTransactionAccount = document.getElementById('edit-transaction-account');
+    const transferAccount = document.getElementById('transfer-account');
+    const editTransferAccount = document.getElementById('edit-transfer-account');
     
     accountsList.innerHTML = '';
     accountSelect.innerHTML = '<option value="">All Accounts</option>';
+    if (transactionAccountFilter) {
+        transactionAccountFilter.innerHTML = '<option value="">All Accounts</option>';
+    }
+    if (editTransactionAccount) {
+        editTransactionAccount.innerHTML = '';
+    }
+    if (transferAccount) {
+        transferAccount.innerHTML = '<option value="">Select destination account</option>';
+    }
+    if (editTransferAccount) {
+        editTransferAccount.innerHTML = '<option value="">Select destination account</option>';
+    }
     
     // Group accounts by type
     const accountsByType = accounts.reduce((acc, account) => {
@@ -88,19 +105,75 @@ async function loadAccounts() {
             `;
             accountsList.appendChild(div);
             
-            // Select dropdown
+            // Add to all dropdowns
             const option = document.createElement('option');
             option.value = account.id;
             option.textContent = account.name;
             accountSelect.appendChild(option);
+            
+            if (transactionAccountFilter) {
+                const filterOption = document.createElement('option');
+                filterOption.value = account.id;
+                filterOption.textContent = account.name;
+                transactionAccountFilter.appendChild(filterOption);
+            }
+            
+            if (editTransactionAccount) {
+                const editOption = document.createElement('option');
+                editOption.value = account.id;
+                editOption.textContent = account.name;
+                editTransactionAccount.appendChild(editOption);
+            }
+            
+            if (transferAccount) {
+                const transferOption = document.createElement('option');
+                transferOption.value = account.id;
+                transferOption.textContent = account.name;
+                transferAccount.appendChild(transferOption);
+            }
+            
+            if (editTransferAccount) {
+                const editTransferOption = document.createElement('option');
+                editTransferOption.value = account.id;
+                editTransferOption.textContent = account.name;
+                editTransferAccount.appendChild(editTransferOption);
+            }
         });
     });
 }
 
 async function loadTransactions() {
-    const endpoint = currentAccount 
-        ? `/api/transactions?account_id=${currentAccount}`
-        : '/api/transactions';
+    // Build query parameters
+    const params = new URLSearchParams();
+    
+    // Account filter (either from sidebar or filter dropdown)
+    const accountFilter = document.getElementById('transaction-account-filter');
+    const selectedAccount = accountFilter ? accountFilter.value : '';
+    if (currentAccount) {
+        params.append('account_id', currentAccount);
+    } else if (selectedAccount) {
+        params.append('account_id', selectedAccount);
+    }
+    
+    // Category filter
+    const categoryFilter = document.getElementById('transaction-category-filter');
+    if (categoryFilter && categoryFilter.value) {
+        params.append('category', categoryFilter.value);
+    }
+    
+    // Type filter
+    const typeFilter = document.getElementById('transaction-type-filter');
+    if (typeFilter && typeFilter.value) {
+        params.append('type', typeFilter.value);
+    }
+    
+    // Date filter
+    const dateFrom = document.getElementById('transaction-date-from');
+    if (dateFrom && dateFrom.value) {
+        params.append('date_from', dateFrom.value);
+    }
+    
+    const endpoint = `/api/transactions?${params.toString()}`;
     const transactions = await apiCall(endpoint);
     const tbody = document.getElementById('transactions-list');
     
@@ -121,6 +194,8 @@ async function loadTransactions() {
             <td>${t.type}</td>
             <td>${t.notes || '-'}</td>
             <td>
+                <button class="btn btn-secondary" style="padding: 5px 8px; font-size: 12px; margin-right: 5px;" 
+                        onclick="editTransaction(${t.id})">✏️</button>
                 <button class="btn btn-danger" style="padding: 5px 10px; font-size: 12px;" 
                         onclick="deleteTransaction(${t.id})">Delete</button>
             </td>
@@ -163,13 +238,20 @@ async function loadRecurringTransactions() {
 }
 
 async function addTransaction() {
+    // Handle custom category
+    let category = document.getElementById('category').value;
+    if (category === 'custom') {
+        category = prompt('Enter new category name:');
+        if (!category) return;
+    }
+    
     const data = {
         account_id: document.getElementById('account-select').value,
         amount: parseFloat(document.getElementById('amount').value),
         date: document.getElementById('date').value,
         type: document.getElementById('type').value,
         payee: document.getElementById('payee').value,
-        category: document.getElementById('category').value,
+        category: category,
         notes: document.getElementById('notes').value,
         is_recurring: document.getElementById('is-recurring').checked,
         frequency: document.getElementById('frequency').value,
@@ -181,7 +263,19 @@ async function addTransaction() {
         return;
     }
     
-    if (data.type === 'expense') {
+    // Handle transfer
+    if (data.type === 'transfer') {
+        const transferAccountId = document.getElementById('transfer-account').value;
+        if (!transferAccountId) {
+            alert('Please select a destination account for the transfer');
+            return;
+        }
+        data.transfer_account_id = transferAccountId;
+        // Set payee to destination account name
+        const accounts = await apiCall('/api/accounts');
+        const destAccount = accounts.find(a => a.id == transferAccountId);
+        data.payee = destAccount ? destAccount.name : 'Transfer';
+    } else if (data.type === 'expense') {
         data.amount = -Math.abs(data.amount);
     } else {
         data.amount = Math.abs(data.amount);
@@ -358,7 +452,17 @@ async function updateCharts() {
         charts.category = new Chart(ctx1, {
             type: 'doughnut',
             data: chartData.category,
-            options: { responsive: true, maintainAspectRatio: true }
+            options: { 
+                responsive: true, 
+                maintainAspectRatio: true,
+                onClick: (event, elements) => {
+                    if (elements.length > 0) {
+                        const index = elements[0].index;
+                        const category = chartData.category.labels[index];
+                        showCategoryDetails(category);
+                    }
+                }
+            }
         });
     }
     
@@ -390,14 +494,23 @@ async function updateCharts() {
         });
     }
     
-    // Income vs Expense Chart
-    if (chartData.income_expense.labels.length > 0) {
-        const ctx4 = document.getElementById('incomeExpenseChart').getContext('2d');
-        if (charts.incomeExpense) charts.incomeExpense.destroy();
-        charts.incomeExpense = new Chart(ctx4, {
-            type: 'pie',
-            data: chartData.income_expense,
-            options: { responsive: true }
+    // Category Trends Chart
+    if (chartData.category_trends && chartData.category_trends.labels.length > 0) {
+        const ctx4 = document.getElementById('categoryTrendsChart').getContext('2d');
+        if (charts.categoryTrends) charts.categoryTrends.destroy();
+        charts.categoryTrends = new Chart(ctx4, {
+            type: 'line',
+            data: chartData.category_trends,
+            options: { 
+                responsive: true,
+                scales: { y: { beginAtZero: true } },
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'bottom'
+                    }
+                }
+            }
         });
     }
 }
@@ -531,8 +644,15 @@ function clearForm() {
     document.getElementById('payee').value = '';
     document.getElementById('notes').value = '';
     document.getElementById('date').valueAsDate = new Date();
+    document.getElementById('type').value = 'expense';
     document.getElementById('is-recurring').checked = false;
     document.getElementById('recurring-section').classList.remove('active');
+    
+    // Hide transfer fields
+    const transferRow = document.getElementById('transfer-row');
+    if (transferRow) {
+        transferRow.style.display = 'none';
+    }
 }
 
 function showAddAccountModal() {
@@ -575,6 +695,101 @@ async function updateAccount() {
     loadAccounts();
 }
 
+async function editTransaction(id) {
+    // Get transaction details
+    const transactions = await apiCall('/api/transactions');
+    const transaction = transactions.find(t => t.id === id);
+    
+    if (!transaction) return;
+    
+    editingTransactionId = id;
+    
+    // Populate form
+    document.getElementById('edit-transaction-account').value = transaction.account_id;
+    document.getElementById('edit-transaction-amount').value = Math.abs(transaction.amount);
+    document.getElementById('edit-transaction-date').value = transaction.date;
+    document.getElementById('edit-transaction-type').value = transaction.type;
+    document.getElementById('edit-transaction-payee').value = transaction.payee || '';
+    document.getElementById('edit-transaction-category').value = transaction.category || '';
+    document.getElementById('edit-transaction-notes').value = transaction.notes || '';
+    
+    // Handle transfer fields
+    if (transaction.type === 'transfer') {
+        // For transfers, try to find the destination account by payee name
+        const accounts = await apiCall('/api/accounts');
+        const destAccount = accounts.find(a => a.name === transaction.payee);
+        if (destAccount) {
+            document.getElementById('edit-transfer-account').value = destAccount.id;
+        }
+        toggleEditTransferFields();
+    }
+    
+    document.getElementById('editTransactionModal').style.display = 'block';
+}
+
+function closeEditTransactionModal() {
+    document.getElementById('editTransactionModal').style.display = 'none';
+    editingTransactionId = null;
+}
+
+async function updateTransaction() {
+    if (!editingTransactionId) return;
+    
+    // Handle custom category
+    let category = document.getElementById('edit-transaction-category').value;
+    if (category === 'custom') {
+        category = prompt('Enter new category name:');
+        if (!category) return;
+    }
+    
+    const data = {
+        account_id: parseInt(document.getElementById('edit-transaction-account').value),
+        amount: parseFloat(document.getElementById('edit-transaction-amount').value),
+        date: document.getElementById('edit-transaction-date').value,
+        type: document.getElementById('edit-transaction-type').value,
+        payee: document.getElementById('edit-transaction-payee').value,
+        category: category,
+        notes: document.getElementById('edit-transaction-notes').value
+    };
+    
+    if (!data.account_id || !data.amount || !data.date) {
+        alert('Please fill in required fields: Account, Amount, and Date');
+        return;
+    }
+    
+    // Handle transfer
+    if (data.type === 'transfer') {
+        const transferAccountId = document.getElementById('edit-transfer-account').value;
+        if (!transferAccountId) {
+            alert('Please select a destination account for the transfer');
+            return;
+        }
+        data.transfer_account_id = transferAccountId;
+        // Set payee to destination account name
+        const accounts = await apiCall('/api/accounts');
+        const destAccount = accounts.find(a => a.id == transferAccountId);
+        data.payee = destAccount ? destAccount.name : 'Transfer';
+    }
+    
+    await apiCall(`/api/transactions/${editingTransactionId}`, 'PUT', data);
+    closeEditTransactionModal();
+    loadAccounts();
+    loadTransactions();
+    updateAnalytics();
+}
+
+function toggleTransferFields() {
+    const type = document.getElementById('type').value;
+    const transferRow = document.getElementById('transfer-row');
+    transferRow.style.display = type === 'transfer' ? 'flex' : 'none';
+}
+
+function toggleEditTransferFields() {
+    const type = document.getElementById('edit-transaction-type').value;
+    const transferRow = document.getElementById('edit-transfer-row');
+    transferRow.style.display = type === 'transfer' ? 'flex' : 'none';
+}
+
 function toggleSidebar() {
     const sidebar = document.getElementById('sidebar');
     const mainContent = document.querySelector('.main-content');
@@ -582,6 +797,59 @@ function toggleSidebar() {
     if (mainContent) {
         mainContent.classList.toggle('expanded');
     }
+}
+
+async function showCategoryDetails(category) {
+    const filters = getAnalyticsFilters();
+    const queryString = new URLSearchParams(filters).toString();
+    
+    const transactions = await apiCall(`/api/analytics/category/${encodeURIComponent(category)}?${queryString}`);
+    
+    document.getElementById('category-modal-title').textContent = `${category} Transactions`;
+    
+    const tableContainer = document.getElementById('category-transactions-table');
+    
+    if (transactions.length === 0) {
+        tableContainer.innerHTML = '<p style="color: #6c757d; text-align: center; padding: 20px;">No transactions found for this category in the selected period.</p>';
+    } else {
+        let tableHtml = `
+            <table style="width: 100%; margin-top: 15px;">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Account</th>
+                        <th>Payee</th>
+                        <th>Amount</th>
+                        <th>Notes</th>
+                    </tr>
+                </thead>
+                <tbody>
+        `;
+        
+        transactions.forEach(t => {
+            const isPositive = t.amount >= 0;
+            tableHtml += `
+                <tr>
+                    <td>${t.date}</td>
+                    <td>${t.account_name}</td>
+                    <td>${t.payee || '-'}</td>
+                    <td class="amount ${isPositive ? 'positive' : 'negative'}">
+                        £${Math.abs(t.amount).toFixed(2)}
+                    </td>
+                    <td>${t.notes || '-'}</td>
+                </tr>
+            `;
+        });
+        
+        tableHtml += '</tbody></table>';
+        tableContainer.innerHTML = tableHtml;
+    }
+    
+    document.getElementById('categoryDetailsModal').style.display = 'block';
+}
+
+function closeCategoryModal() {
+    document.getElementById('categoryDetailsModal').style.display = 'none';
 }
 
 // Utility function for debouncing
