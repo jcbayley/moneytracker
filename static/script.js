@@ -1,5 +1,7 @@
 let currentAccount = null;
 let charts = {};
+let editingAccountId = null;
+let currentAnalyticsMonth = new Date();
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', function() {
@@ -47,25 +49,51 @@ async function loadAccounts() {
     accountsList.innerHTML = '';
     accountSelect.innerHTML = '<option value="">All Accounts</option>';
     
-    accounts.forEach(account => {
-        // Sidebar
-        const div = document.createElement('div');
-        div.className = 'account-item';
-        if (account.id === currentAccount) div.classList.add('active');
-        div.onclick = () => selectAccount(account.id);
-        div.innerHTML = `
-            <span>${account.name}</span>
-            <span class="amount ${account.balance >= 0 ? 'positive' : 'negative'}">
-                £${Math.abs(account.balance).toFixed(2)}
-            </span>
-        `;
-        accountsList.appendChild(div);
+    // Group accounts by type
+    const accountsByType = accounts.reduce((acc, account) => {
+        if (!acc[account.type]) acc[account.type] = [];
+        acc[account.type].push(account);
+        return acc;
+    }, {});
+    
+    // Sort types for consistent display
+    const typeOrder = ['checking', 'savings', 'credit', 'investment'];
+    const sortedTypes = Object.keys(accountsByType).sort((a, b) => {
+        const aIndex = typeOrder.indexOf(a);
+        const bIndex = typeOrder.indexOf(b);
+        return (aIndex === -1 ? 999 : aIndex) - (bIndex === -1 ? 999 : bIndex);
+    });
+    
+    sortedTypes.forEach(type => {
+        // Add type header
+        const typeHeader = document.createElement('div');
+        typeHeader.className = 'account-type-header';
+        typeHeader.innerHTML = `<h4>${type.charAt(0).toUpperCase() + type.slice(1)}</h4>`;
+        accountsList.appendChild(typeHeader);
         
-        // Select dropdown
-        const option = document.createElement('option');
-        option.value = account.id;
-        option.textContent = account.name;
-        accountSelect.appendChild(option);
+        accountsByType[type].forEach(account => {
+            // Sidebar
+            const div = document.createElement('div');
+            div.className = 'account-item';
+            if (account.id === currentAccount) div.classList.add('active');
+            div.onclick = () => selectAccount(account.id);
+            div.innerHTML = `
+                <span>${account.name}</span>
+                <div>
+                    <span class="amount ${account.balance >= 0 ? 'positive' : 'negative'}">
+                        £${Math.abs(account.balance).toFixed(2)}
+                    </span>
+                    <button class="btn-edit" onclick="editAccount(${account.id}, '${account.name}', '${account.type}'); event.stopPropagation();">✏️</button>
+                </div>
+            `;
+            accountsList.appendChild(div);
+            
+            // Select dropdown
+            const option = document.createElement('option');
+            option.value = account.id;
+            option.textContent = account.name;
+            accountSelect.appendChild(option);
+        });
     });
 }
 
@@ -211,7 +239,10 @@ async function addAccount() {
 }
 
 async function updateAnalytics() {
-    const stats = await apiCall('/api/analytics/stats');
+    const filters = getAnalyticsFilters();
+    const queryString = new URLSearchParams(filters).toString();
+    
+    const stats = await apiCall(`/api/analytics/stats?${queryString}`);
     document.getElementById('total-balance').textContent = `£${stats.total_balance.toFixed(2)}`;
     document.getElementById('monthly-income').textContent = `£${stats.monthly_income.toFixed(2)}`;
     document.getElementById('monthly-expenses').textContent = `£${stats.monthly_expenses.toFixed(2)}`;
@@ -221,8 +252,104 @@ async function updateAnalytics() {
     updateCharts();
 }
 
+function getAnalyticsFilters() {
+    const filters = {};
+    
+    // Get selected account types
+    const accountTypeChecks = document.querySelectorAll('#account-type-filters input[type="checkbox"]:checked');
+    const selectedTypes = Array.from(accountTypeChecks).map(cb => cb.value);
+    if (selectedTypes.length > 0) {
+        selectedTypes.forEach(type => {
+            if (!filters['account_types']) filters['account_types'] = [];
+            filters['account_types'].push(type);
+        });
+    }
+    
+    // Get date range
+    const startDate = document.getElementById('start-date').value;
+    const endDate = document.getElementById('end-date').value;
+    
+    if (startDate) filters['start_date'] = startDate;
+    if (endDate) filters['end_date'] = endDate;
+    
+    return filters;
+}
+
+function updateDateFilter() {
+    const period = document.getElementById('date-period').value;
+    const startDate = document.getElementById('start-date');
+    const endDate = document.getElementById('end-date');
+    const prevBtn = document.getElementById('prev-month');
+    const nextBtn = document.getElementById('next-month');
+    const currentPeriodSpan = document.getElementById('current-period');
+    
+    // Reset
+    startDate.disabled = true;
+    endDate.disabled = true;
+    prevBtn.style.display = 'none';
+    nextBtn.style.display = 'none';
+    
+    const now = new Date();
+    let start, end;
+    
+    if (period === 'custom') {
+        startDate.disabled = false;
+        endDate.disabled = false;
+        currentPeriodSpan.textContent = 'Custom Range';
+        return;
+    }
+    
+    if (period === 'current_month' || period === 'last_month') {
+        prevBtn.style.display = 'inline-block';
+        nextBtn.style.display = 'inline-block';
+    }
+    
+    switch (period) {
+        case 'current_month':
+            start = new Date(currentAnalyticsMonth.getFullYear(), currentAnalyticsMonth.getMonth(), 1);
+            end = new Date(currentAnalyticsMonth.getFullYear(), currentAnalyticsMonth.getMonth() + 1, 0);
+            currentPeriodSpan.textContent = currentAnalyticsMonth.toLocaleDateString('en-US', {month: 'long', year: 'numeric'});
+            break;
+        case 'last_month':
+            const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+            start = lastMonth;
+            end = new Date(now.getFullYear(), now.getMonth(), 0);
+            currentPeriodSpan.textContent = lastMonth.toLocaleDateString('en-US', {month: 'long', year: 'numeric'});
+            break;
+        case 'last_3_months':
+            start = new Date(now.getFullYear(), now.getMonth() - 3, 1);
+            end = now;
+            currentPeriodSpan.textContent = 'Last 3 Months';
+            break;
+        case 'last_6_months':
+            start = new Date(now.getFullYear(), now.getMonth() - 6, 1);
+            end = now;
+            currentPeriodSpan.textContent = 'Last 6 Months';
+            break;
+        case 'this_year':
+            start = new Date(now.getFullYear(), 0, 1);
+            end = now;
+            currentPeriodSpan.textContent = now.getFullYear().toString();
+            break;
+    }
+    
+    if (start && end) {
+        startDate.value = start.toISOString().split('T')[0];
+        endDate.value = end.toISOString().split('T')[0];
+    }
+    
+    updateAnalytics();
+}
+
+function navigateMonth(direction) {
+    currentAnalyticsMonth.setMonth(currentAnalyticsMonth.getMonth() + direction);
+    updateDateFilter();
+}
+
 async function updateCharts() {
-    const chartData = await apiCall('/api/analytics/charts');
+    const filters = getAnalyticsFilters();
+    const queryString = new URLSearchParams(filters).toString();
+    const chartData = await apiCall(`/api/analytics/charts?${queryString}`);
     
     // Category Chart
     if (chartData.category.labels.length > 0) {
@@ -387,7 +514,7 @@ function switchTab(tab) {
     event.target.classList.add('active');
     
     if (tab === 'analytics') {
-        updateAnalytics();
+        updateDateFilter(); // This will also call updateAnalytics()
     } else if (tab === 'settings') {
         getDatabaseInfo();
     }
@@ -416,6 +543,36 @@ function closeModal() {
     document.getElementById('accountModal').style.display = 'none';
     document.getElementById('new-account-name').value = '';
     document.getElementById('new-account-balance').value = '0';
+}
+
+function editAccount(id, name, type) {
+    editingAccountId = id;
+    document.getElementById('edit-account-name').value = name;
+    document.getElementById('edit-account-type').value = type;
+    document.getElementById('editAccountModal').style.display = 'block';
+}
+
+function closeEditModal() {
+    document.getElementById('editAccountModal').style.display = 'none';
+    editingAccountId = null;
+}
+
+async function updateAccount() {
+    if (!editingAccountId) return;
+    
+    const data = {
+        name: document.getElementById('edit-account-name').value,
+        type: document.getElementById('edit-account-type').value
+    };
+    
+    if (!data.name) {
+        alert('Please enter an account name');
+        return;
+    }
+    
+    await apiCall(`/api/accounts/${editingAccountId}`, 'PUT', data);
+    closeEditModal();
+    loadAccounts();
 }
 
 function toggleSidebar() {

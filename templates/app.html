@@ -140,21 +140,60 @@
 
         <div id="analytics-tab" class="content hidden">
             <div class="main-content" style="width: 100%;">
+                <div style="background: white; padding: 20px; border-radius: 10px; margin-bottom: 20px;">
+                    <h3 style="margin-bottom: 15px;">Analytics Filters</h3>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Date Period</label>
+                            <select id="date-period" onchange="updateDateFilter()">
+                                <option value="current_month">This Month</option>
+                                <option value="last_month">Last Month</option>
+                                <option value="last_3_months">Last 3 Months</option>
+                                <option value="last_6_months">Last 6 Months</option>
+                                <option value="this_year">This Year</option>
+                                <option value="custom">Custom Range</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Start Date</label>
+                            <input type="date" id="start-date" onchange="updateAnalytics()" disabled>
+                        </div>
+                        <div class="form-group">
+                            <label>End Date</label>
+                            <input type="date" id="end-date" onchange="updateAnalytics()" disabled>
+                        </div>
+                        <div class="form-group">
+                            <label>Account Types</label>
+                            <div id="account-type-filters" style="display: flex; gap: 10px; margin-top: 5px;">
+                                <label><input type="checkbox" value="checking" checked onchange="updateAnalytics()"> Checking</label>
+                                <label><input type="checkbox" value="savings" checked onchange="updateAnalytics()"> Savings</label>
+                                <label><input type="checkbox" value="credit" checked onchange="updateAnalytics()"> Credit</label>
+                                <label><input type="checkbox" value="investment" checked onchange="updateAnalytics()"> Investment</label>
+                            </div>
+                        </div>
+                    </div>
+                    <div style="margin-top: 15px;">
+                        <button class="btn btn-secondary" onclick="navigateMonth(-1)" id="prev-month" style="display:none;">← Previous</button>
+                        <span id="current-period" style="margin: 0 15px; font-weight: 500;"></span>
+                        <button class="btn btn-secondary" onclick="navigateMonth(1)" id="next-month" style="display:none;">Next →</button>
+                    </div>
+                </div>
+                
                 <div class="stats-grid">
                     <div class="stat-card">
                         <div style="font-size: 12px; color: #6c757d;">Total Balance</div>
                         <div style="font-size: 24px; font-weight: bold;" id="total-balance">£0.00</div>
                     </div>
                     <div class="stat-card">
-                        <div style="font-size: 12px; color: #6c757d;">Monthly Income</div>
+                        <div style="font-size: 12px; color: #6c757d;" id="income-label">Period Income</div>
                         <div style="font-size: 24px; font-weight: bold;" id="monthly-income">£0.00</div>
                     </div>
                     <div class="stat-card">
-                        <div style="font-size: 12px; color: #6c757d;">Monthly Expenses</div>
+                        <div style="font-size: 12px; color: #6c757d;" id="expense-label">Period Expenses</div>
                         <div style="font-size: 24px; font-weight: bold;" id="monthly-expenses">£0.00</div>
                     </div>
                     <div class="stat-card">
-                        <div style="font-size: 12px; color: #6c757d;">Net Monthly</div>
+                        <div style="font-size: 12px; color: #6c757d;" id="net-label">Net Period</div>
                         <div style="font-size: 24px; font-weight: bold;" id="net-monthly">£0.00</div>
                     </div>
                 </div>
@@ -229,6 +268,28 @@
                 <input type="number" id="new-account-balance" step="0.01" value="0" style="width: 100%;">
             </div>
             <button class="btn btn-primary" onclick="addAccount()">Add Account</button>
+        </div>
+    </div>
+
+    <!-- Edit Account Modal -->
+    <div id="editAccountModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeEditModal()">&times;</span>
+            <h3>Edit Account</h3>
+            <div class="form-group" style="margin: 15px 0;">
+                <label>Account Name</label>
+                <input type="text" id="edit-account-name" style="width: 100%;">
+            </div>
+            <div class="form-group" style="margin: 15px 0;">
+                <label>Account Type</label>
+                <select id="edit-account-type" style="width: 100%;">
+                    <option value="checking">Checking</option>
+                    <option value="savings">Savings</option>
+                    <option value="credit">Credit Card</option>
+                    <option value="investment">Investment</option>
+                </select>
+            </div>
+            <button class="btn btn-primary" onclick="updateAccount()">Update Account</button>
         </div>
     </div>
 

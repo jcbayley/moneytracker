@@ -128,6 +128,41 @@ body {
     color: white;
 }
 
+.account-type-header {
+    margin: 15px 0 10px 0;
+    padding: 0;
+}
+
+.account-type-header h4 {
+    margin: 0;
+    font-size: 14px;
+    color: #495057;
+    text-transform: uppercase;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+}
+
+.btn-edit {
+    background: none;
+    border: none;
+    font-size: 14px;
+    cursor: pointer;
+    padding: 2px 5px;
+    margin-left: 8px;
+    border-radius: 3px;
+    opacity: 0.7;
+    transition: all 0.2s;
+}
+
+.btn-edit:hover {
+    background: rgba(0,0,0,0.1);
+    opacity: 1;
+}
+
+.account-item .amount {
+    margin-right: 5px;
+}
+
 .main-content {
     flex: 1;
     padding: 20px;

@@ -288,24 +288,63 @@ def process_recurring():
 
 @app.route('/api/analytics/stats')
 def get_stats():
-    """Get financial statistics"""
+    """Get financial statistics with filters"""
     db = get_db()
     
-    # Total balance
-    total = db.execute('SELECT SUM(balance) FROM accounts').fetchone()[0] or 0
+    # Get query parameters
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+    account_types = request.args.getlist('account_types')
     
-    # Current month stats
-    current_month = datetime.now().strftime('%Y-%m')
+    # Total balance (always from all accounts for now)
+    if account_types:
+        total = db.execute(
+            f'SELECT SUM(balance) FROM accounts WHERE type IN ({",".join(["?" for _ in account_types])})',
+            account_types
+        ).fetchone()[0] or 0
+    else:
+        total = db.execute('SELECT SUM(balance) FROM accounts').fetchone()[0] or 0
     
-    income = db.execute('''
-        SELECT SUM(amount) FROM transactions 
-        WHERE type = 'income' AND date LIKE ?
-    ''', (f'{current_month}%',)).fetchone()[0] or 0
+    # Build date and account type filters
+    date_filter = ''
+    params_income = []
+    params_expense = []
     
-    expenses = abs(db.execute('''
-        SELECT SUM(amount) FROM transactions 
-        WHERE type = 'expense' AND date LIKE ?
-    ''', (f'{current_month}%',)).fetchone()[0] or 0)
+    if start_date and end_date:
+        date_filter = ' AND t.date BETWEEN ? AND ?'
+        params_income.extend([start_date, end_date])
+        params_expense.extend([start_date, end_date])
+    elif start_date:
+        date_filter = ' AND t.date >= ?'
+        params_income.append(start_date)
+        params_expense.append(start_date)
+    elif end_date:
+        date_filter = ' AND t.date <= ?'
+        params_income.append(end_date)
+        params_expense.append(end_date)
+    
+    account_filter = ''
+    if account_types:
+        account_filter = f' AND a.type IN ({",".join(["?" for _ in account_types])})'
+        params_income.extend(account_types)
+        params_expense.extend(account_types)
+    
+    # Income query
+    income_query = f'''
+        SELECT SUM(t.amount) FROM transactions t
+        JOIN accounts a ON t.account_id = a.id
+        WHERE t.type = 'income'{date_filter}{account_filter}
+    '''
+    
+    # Expense query  
+    expense_query = f'''
+        SELECT SUM(t.amount) FROM transactions t
+        JOIN accounts a ON t.account_id = a.id
+        WHERE t.type = 'expense'{date_filter}{account_filter}
+    '''
+    
+    income = db.execute(income_query, params_income).fetchone()[0] or 0
+    expenses = abs(db.execute(expense_query, params_expense).fetchone()[0] or 0)
     
     db.close()
     
@@ -318,17 +357,43 @@ def get_stats():
 
 @app.route('/api/analytics/charts')
 def get_chart_data():
-    """Get data for charts"""
+    """Get data for charts with filters"""
     db = get_db()
     
+    # Get query parameters
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+    account_types = request.args.getlist('account_types')
+    
+    # Build filters
+    date_filter = ''
+    params = []
+    
+    if start_date and end_date:
+        date_filter = ' AND t.date BETWEEN ? AND ?'
+        params.extend([start_date, end_date])
+    elif start_date:
+        date_filter = ' AND t.date >= ?'
+        params.append(start_date)
+    elif end_date:
+        date_filter = ' AND t.date <= ?'
+        params.append(end_date)
+    
+    account_filter = ''
+    if account_types:
+        account_filter = f' AND a.type IN ({",".join(["?" for _ in account_types])})'
+        params.extend(account_types)
+    
     # Category spending
-    categories = db.execute('''
-        SELECT category, SUM(ABS(amount)) as total
-        FROM transactions
-        WHERE type = 'expense' AND category IS NOT NULL
-        GROUP BY category
+    category_query = f'''
+        SELECT t.category, SUM(ABS(t.amount)) as total
+        FROM transactions t
+        JOIN accounts a ON t.account_id = a.id
+        WHERE t.type = 'expense' AND t.category IS NOT NULL{date_filter}{account_filter}
+        GROUP BY t.category
         ORDER BY total DESC
-    ''').fetchall()
+    '''
+    categories = db.execute(category_query, params).fetchall()
     
     category_data = {
         'labels': [c['category'] for c in categories],
@@ -341,17 +406,20 @@ def get_chart_data():
         }]
     }
     
-    # Monthly trend (last 6 months)
-    trends = db.execute('''
+    # Monthly trend (filtered)
+    trend_query = f'''
         SELECT 
-            strftime('%Y-%m', date) as month,
-            SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END) as income,
-            SUM(CASE WHEN type = 'expense' THEN ABS(amount) ELSE 0 END) as expenses
-        FROM transactions
+            strftime('%Y-%m', t.date) as month,
+            SUM(CASE WHEN t.type = 'income' THEN t.amount ELSE 0 END) as income,
+            SUM(CASE WHEN t.type = 'expense' THEN ABS(t.amount) ELSE 0 END) as expenses
+        FROM transactions t
+        JOIN accounts a ON t.account_id = a.id
+        WHERE 1=1{date_filter}{account_filter}
         GROUP BY month
         ORDER BY month DESC
         LIMIT 6
-    ''').fetchall()
+    '''
+    trends = db.execute(trend_query, params).fetchall()
     
     trends = list(reversed(trends))
     trend_data = {
@@ -374,8 +442,13 @@ def get_chart_data():
         ]
     }
     
-    # Account balances
-    accounts = db.execute('SELECT name, balance FROM accounts ORDER BY balance DESC').fetchall()
+    # Account balances (filtered by type)
+    if account_types:
+        account_query = f'SELECT name, balance FROM accounts WHERE type IN ({",".join(["?" for _ in account_types])}) ORDER BY balance DESC'
+        accounts = db.execute(account_query, account_types).fetchall()
+    else:
+        accounts = db.execute('SELECT name, balance FROM accounts ORDER BY balance DESC').fetchall()
+    
     account_data = {
         'labels': [a['name'] for a in accounts],
         'datasets': [{
@@ -385,13 +458,16 @@ def get_chart_data():
         }]
     }
     
-    # Income vs Expenses total
-    totals = db.execute('''
+    # Income vs Expenses total (filtered)
+    income_expense_query = f'''
         SELECT 
-            SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END) as income,
-            SUM(CASE WHEN type = 'expense' THEN ABS(amount) ELSE 0 END) as expenses
-        FROM transactions
-    ''').fetchone()
+            SUM(CASE WHEN t.type = 'income' THEN t.amount ELSE 0 END) as income,
+            SUM(CASE WHEN t.type = 'expense' THEN ABS(t.amount) ELSE 0 END) as expenses
+        FROM transactions t
+        JOIN accounts a ON t.account_id = a.id
+        WHERE 1=1{date_filter}{account_filter}
+    '''
+    totals = db.execute(income_expense_query, params).fetchone()
     
     income_expense_data = {
         'labels': ['Income', 'Expenses'],
