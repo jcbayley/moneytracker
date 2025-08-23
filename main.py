@@ -19,13 +19,21 @@ from app.routes.categories import categories_bp
 from app.routes.analytics import analytics_bp
 from app.routes.data import data_bp
 from app.routes.settings import settings_bp
+from app.routes.backup import backup_bp
+from app.utils.backup import BackupManager
 
 
 def load_settings():
     """Load settings from settings.json file."""
     settings_file = 'settings.json'
     default_settings = {
-        'database_path': 'money_tracker.db'
+        'database_path': 'money_tracker.db',
+        'backup': {
+            'enabled': True,
+            'interval_hours': 24,
+            'max_backups': 7,
+            'directory': 'backups'
+        }
     }
     
     if os.path.exists(settings_file):
@@ -48,6 +56,9 @@ def create_app():
     settings = load_settings()
     app.config['DATABASE'] = settings['database_path']
     
+    # Store backup settings in app context
+    app._backup_settings = settings.get('backup', {})
+    
     # Register blueprints
     app.register_blueprint(accounts_bp)
     app.register_blueprint(transactions_bp)
@@ -57,6 +68,7 @@ def create_app():
     app.register_blueprint(analytics_bp)
     app.register_blueprint(data_bp)
     app.register_blueprint(settings_bp)
+    app.register_blueprint(backup_bp)
     
     @app.route('/')
     def index():
@@ -64,6 +76,22 @@ def create_app():
         return render_template('app.html')
     
     return app
+
+
+def start_backup_system(app):
+    """Initialize and start the backup system."""
+    with app.app_context():
+        backup_settings = getattr(app, '_backup_settings', {})
+        if backup_settings.get('enabled', True):
+            backup_manager = BackupManager(
+                db_path=app.config['DATABASE'],
+                backup_dir=backup_settings.get('directory', 'backups'),
+                settings=backup_settings
+            )
+            backup_manager.start_periodic_backup()
+            
+            # Store backup manager in app context for later access
+            app._backup_manager = backup_manager
 
 
 def run_desktop_app(app):
@@ -148,10 +176,12 @@ def print_startup_info():
     print("  • Multiple account support")
     print("  • Analytics and charts")
     print("  • Data export functionality")
+    print("  • Automatic database backups")
     print("\n💡 Tips:")
     print("  • Data persists between sessions")
     print("  • Access from any device on your network")
     print("  • Database file: money_tracker.db")
+    print("  • Backups stored in: backups/ directory")
 
 
 if __name__ == '__main__':
@@ -181,6 +211,9 @@ if __name__ == '__main__':
         # Run migrations for existing database
         with app.app_context():
             Database.migrate_add_project_column()
+    
+    # Start backup system
+    start_backup_system(app)
     
     # Run based on selected mode
     if args.mode == 'window':

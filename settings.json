@@ -1,3 +1,9 @@
 {
-    "database_path": "money_tracker.db"
+    "database_path": "money_tracker.db",
+    "backup": {
+        "enabled": true,
+        "interval_hours": 24,
+        "max_backups": 7,
+        "directory": "backups"
+    }
 }
