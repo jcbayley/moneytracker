@@ -171,10 +171,14 @@ class TransactionsComponent {
 
     static async editTransaction(id) {
         try {
-            const transactions = await API.getTransactions();
+            // Get ALL transactions, not filtered ones
+            const transactions = await API.getTransactions({limit: 10000});
             const transaction = transactions.find(t => t.id === id);
 
-            if (!transaction) return;
+            if (!transaction) {
+                UI.showNotification('Transaction not found', 'error');
+                return;
+            }
 
             appState.setEditingTransaction(id);
 
@@ -195,7 +199,6 @@ class TransactionsComponent {
 
             // Handle transfer fields
             if (transaction.type === 'transfer') {
-                const accounts = await API.getAccounts();
                 const destAccount = accounts.find(a => a.name === transaction.payee);
                 if (destAccount) {
                     document.getElementById('edit-transfer-account').value = destAccount.id;
