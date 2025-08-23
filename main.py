@@ -23,6 +23,41 @@ from app.routes.backup import backup_bp
 from app.utils.backup import BackupManager
 
 
+def show_error_dialog(title, message):
+    """Show error dialog using available GUI toolkit"""
+    try:
+        # Try PyQt5 first
+        from PyQt5.QtWidgets import QApplication, QMessageBox
+        from PyQt5.QtCore import Qt
+        
+        app = QApplication.instance()
+        if app is None:
+            app = QApplication(['Error'])
+        
+        msg_box = QMessageBox()
+        msg_box.setIcon(QMessageBox.Critical)
+        msg_box.setWindowTitle(title)
+        msg_box.setText(message)
+        msg_box.setStandardButtons(QMessageBox.Ok)
+        msg_box.exec_()
+        
+    except ImportError:
+        try:
+            # Fallback to tkinter (always available)
+            import tkinter as tk
+            from tkinter import messagebox
+            
+            root = tk.Tk()
+            root.withdraw()  # Hide main window
+            messagebox.showerror(title, message)
+            root.destroy()
+            
+        except Exception:
+            # Last resort: print to console
+            print(f"ERROR: {title}")
+            print(f"{message}")
+
+
 def load_settings():
     """Load settings from settings.json file."""
     settings_file = 'settings.json'
@@ -101,16 +136,26 @@ def start_backup_system(app):
 
 def run_desktop_app(app):
     """Run the app in a desktop window using PyQt5"""
+    import os
+    import sys
+    
     try:
         # Try PyQt5 first (most reliable for bundling)
         from PyQt5.QtWidgets import QApplication, QMainWindow
         from PyQt5.QtWebEngineWidgets import QWebEngineView
         from PyQt5.QtCore import QUrl, QTimer
         from PyQt5.QtGui import QIcon
-        import sys
         
-        # Create QApplication
+        # Create QApplication with Flatpak-friendly settings
+        os.environ.setdefault('QT_QPA_PLATFORM', 'xcb')  # Ensure X11 platform
         qt_app = QApplication(sys.argv if sys.argv else ['MoneyTracker'])
+        
+        # Set high DPI attributes (only if available)
+        try:
+            if hasattr(qt_app, 'AA_UseHighDpiPixmaps'):
+                qt_app.setAttribute(qt_app.AA_UseHighDpiPixmaps, True)
+        except AttributeError:
+            pass  # Ignore if not available in this Qt version
         
         # Create main window
         window = QMainWindow()
@@ -169,13 +214,29 @@ def run_desktop_app(app):
             sys.exit(0)
         
     except ImportError as e:
-        print(f"❌ PyQt5 not available: {e}")
-        print("🔄 Trying pywebview fallback...")
-        try_webview_fallback(app)
+        # Check if we're running as a standalone package (AppImage/Flatpak)
+        if os.environ.get('APPIMAGE') or os.environ.get('FLATPAK_ID'):
+            show_error_dialog("PyQt5 Import Error", 
+                            f"PyQt5 not available in standalone package:\n\n{e}\n\n" +
+                            "This standalone package requires PyQt5 to function properly.\n" +
+                            "The package may be corrupted or incomplete.")
+            sys.exit(1)
+        else:
+            print(f"❌ PyQt5 not available: {e}")
+            print("🔄 Trying pywebview fallback...")
+            try_webview_fallback(app)
     except Exception as e:
-        print(f"❌ Error: Could not start Qt window: {e}")
-        print("🔄 Trying pywebview fallback...")
-        try_webview_fallback(app)
+        # Check if we're running as a standalone package (AppImage/Flatpak)  
+        if os.environ.get('APPIMAGE') or os.environ.get('FLATPAK_ID'):
+            show_error_dialog("Qt Window Error", 
+                            f"Could not start Qt window in standalone package:\n\n{e}\n\n" +
+                            "This is likely a display/graphics configuration issue.\n\n" +
+                            "Workaround: Run from terminal with --mode browser")
+            sys.exit(1)
+        else:
+            print(f"❌ Error: Could not start Qt window: {e}")
+            print("🔄 Trying pywebview fallback...")
+            try_webview_fallback(app)
 
 
 def try_webview_fallback(app):

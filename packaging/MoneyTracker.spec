@@ -3,13 +3,13 @@
 block_cipher = None
 
 a = Analysis(
-    ['main.py'],
+    ['../main.py'],
     pathex=[],
     binaries=[],
     datas=[
-        ('templates', 'templates'),
-        ('static', 'static'),
-        ('settings.json', '.'),
+        ('../templates', 'templates'),
+        ('../static', 'static'),
+        ('../settings.json', '.'),
     ],
     hiddenimports=[
         'engineio.async_drivers.threading',

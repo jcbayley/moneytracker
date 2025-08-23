@@ -5,3 +5,9 @@ build
 venv
 dist
 *.AppImage
+# Build artifacts
+build/
+dist/
+flatpak-build/
+*.AppImage
+appimagetool-*

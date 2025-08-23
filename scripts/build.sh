@@ -42,7 +42,7 @@ source venv/bin/activate
 
 # Install dependencies
 print_status "Installing dependencies..."
-pip install -r requirements.txt
+pip install -r ../requirements.txt
 
 # Clean previous builds
 print_status "Cleaning previous builds..."
@@ -50,7 +50,7 @@ rm -rf build/ dist/ __pycache__/ *.spec.bak
 
 # Build with PyInstaller
 print_status "Building executable with PyInstaller..."
-pyinstaller MoneyTracker.spec --clean --noconfirm
+pyinstaller ../packaging/MoneyTracker.spec --clean --noconfirm
 
 # Check if build was successful
 if [ -f "dist/MoneyTracker" ]; then

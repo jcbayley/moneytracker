@@ -1,0 +1,26 @@
+app-id: com.moneytracker.MoneyTracker
+runtime: org.freedesktop.Platform
+runtime-version: '23.08'
+sdk: org.freedesktop.Sdk
+command: MoneyTracker
+finish-args:
+  - --share=network
+  - --share=ipc
+  - --socket=x11
+  - --socket=wayland
+  - --filesystem=home:rw
+  - --filesystem=xdg-documents:rw
+  - --device=dri
+  - --talk-name=org.freedesktop.Notifications
+
+modules:
+  - name: MoneyTracker
+    buildsystem: simple
+    build-commands:
+      - install -Dm755 scripts/dist/MoneyTracker ${FLATPAK_DEST}/bin/MoneyTracker
+      - install -Dm644 packaging/com.moneytracker.MoneyTracker.desktop ${FLATPAK_DEST}/share/applications/com.moneytracker.MoneyTracker.desktop
+      - install -Dm644 packaging/com.moneytracker.MoneyTracker.metainfo.xml ${FLATPAK_DEST}/share/metainfo/com.moneytracker.MoneyTracker.metainfo.xml
+      - install -Dm644 packaging/MoneyTracker.png ${FLATPAK_DEST}/share/icons/hicolor/256x256/apps/com.moneytracker.MoneyTracker.png
+    sources:
+      - type: dir
+        path: .

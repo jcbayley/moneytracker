@@ -41,18 +41,21 @@ mkdir -p MoneyTracker.AppDir/usr/share/icons/hicolor/256x256/apps
 # Copy executable and settings
 print_status "Copying executable and configuration..."
 cp dist/MoneyTracker MoneyTracker.AppDir/usr/bin/
-cp settings.json MoneyTracker.AppDir/usr/bin/ 2>/dev/null || echo "Warning: settings.json not found, using defaults"
+cp ../settings.json MoneyTracker.AppDir/usr/bin/ 2>/dev/null || echo "Warning: settings.json not found, using defaults"
 
 # Copy desktop file
-cp com.moneytracker.MoneyTracker.desktop MoneyTracker.AppDir/
-cp com.moneytracker.MoneyTracker.desktop MoneyTracker.AppDir/usr/share/applications/
+cp ../packaging/com.moneytracker.MoneyTracker.desktop MoneyTracker.AppDir/
+cp ../packaging/com.moneytracker.MoneyTracker.desktop MoneyTracker.AppDir/usr/share/applications/
 
-# Create a simple icon (placeholder - you can replace with actual icon)
-print_status "Creating application icon..."
-cat > MoneyTracker.AppDir/MoneyTracker.png << 'EOF'
-# This is a placeholder. Replace with actual PNG icon file
-# You can create one using: convert -size 256x256 xc:green MoneyTracker.png
-EOF
+# Copy application icon
+print_status "Copying application icon..."
+if [ -f "../packaging/MoneyTracker.png" ]; then
+    cp ../packaging/MoneyTracker.png MoneyTracker.AppDir/
+    cp ../packaging/MoneyTracker.png MoneyTracker.AppDir/com.moneytracker.MoneyTracker.png
+    cp ../packaging/MoneyTracker.png MoneyTracker.AppDir/usr/share/icons/hicolor/256x256/apps/
+else
+    print_warning "MoneyTracker.png not found, creating placeholder"
+fi
 
 # Create AppRun script
 print_status "Creating AppRun script..."

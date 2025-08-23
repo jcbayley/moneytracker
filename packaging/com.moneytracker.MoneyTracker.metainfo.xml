@@ -35,15 +35,19 @@
     <keyword>tracker</keyword>
   </keywords>
   <content_rating type="oars-1.1"/>
+  <icon type="cached">com.moneytracker.MoneyTracker</icon>
   <releases>
-    <release version="1.0.0" date="2024-01-01">
+    <release version="1.0.0" date="2025-08-23">
       <description>
         <p>Initial release of Money Tracker</p>
         <ul>
-          <li>Basic transaction tracking</li>
-          <li>Account management</li>
-          <li>Analytics dashboard</li>
-          <li>Export functionality</li>
+          <li>Native Qt5 desktop application</li>
+          <li>Multi-account transaction tracking</li>
+          <li>Recurring transaction support</li>
+          <li>Interactive analytics and charts</li>
+          <li>CSV import/export functionality</li>
+          <li>Automatic backup system</li>
+          <li>Dark/Light theme support</li>
         </ul>
       </description>
     </release>
