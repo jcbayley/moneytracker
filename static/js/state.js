@@ -6,6 +6,7 @@ class AppState {
         this.currentAccount = null;
         this.editingAccountId = null;
         this.editingTransactionId = null;
+        this.editingProject = null;
         this.currentAnalyticsMonth = new Date();
         this.charts = {};
         this.payeesList = [];
@@ -45,6 +46,19 @@ class AppState {
 
     clearEditingTransaction() {
         this.editingTransactionId = null;
+    }
+
+    // Project state
+    setEditingProject(project) {
+        this.editingProject = project;
+    }
+
+    getEditingProject() {
+        return this.editingProject;
+    }
+
+    clearEditingProject() {
+        this.editingProject = null;
     }
 
     // Analytics state

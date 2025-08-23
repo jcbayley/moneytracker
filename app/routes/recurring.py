@@ -22,7 +22,10 @@ def delete_recurring(recurring_id):
 @recurring_bp.route('/api/recurring/process', methods=['POST'])
 def process_recurring():
     """Process due recurring transactions."""
-    processed = RecurringModel.process_due()
-    
-    message = f'Processed {processed} recurring transaction(s)' if processed > 0 else 'No recurring transactions are due'
-    return jsonify({'message': message, 'processed': processed})
+    try:
+        processed = RecurringModel.process_due()
+        
+        message = f'Processed {processed} recurring transaction(s)' if processed > 0 else 'No recurring transactions are due'
+        return jsonify({'message': message, 'processed': processed})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500

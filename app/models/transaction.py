@@ -8,7 +8,7 @@ class TransactionModel:
     """Transaction operations and queries."""
     
     @staticmethod
-    def get_filtered(account_id=None, category=None, trans_type=None, date_from=None, limit=100):
+    def get_filtered(account_id=None, category=None, trans_type=None, date_from=None, date_to=None, limit=100):
         """Get transactions with filters."""
         with Database.get_db() as db:
             query = '''
@@ -36,6 +36,10 @@ class TransactionModel:
                 query += ' AND t.date >= ?'
                 params.append(date_from)
             
+            if date_to:
+                query += ' AND t.date <= ?'
+                params.append(date_to)
+            
             query += ' ORDER BY t.date DESC, t.id DESC LIMIT ?'
             params.append(limit)
             
@@ -52,8 +56,8 @@ class TransactionModel:
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''', (account_id, amount, date, trans_type, payee, category, notes, project, recurring_id))
             
-            # Update account balance
-            AccountModel.update_balance(account_id, amount)
+            # Update account balance using existing connection
+            AccountModel.update_balance(account_id, amount, db)
             db.commit()
             return cursor.lastrowid
     
@@ -84,9 +88,9 @@ class TransactionModel:
                   from_account['name'] if from_account else 'Transfer',
                   category, notes, project, recurring_id))
             
-            # Update both account balances
-            AccountModel.update_balance(from_account_id, -abs(amount))
-            AccountModel.update_balance(to_account_id, abs(amount))
+            # Update both account balances using existing connection
+            AccountModel.update_balance(from_account_id, -abs(amount), db)
+            AccountModel.update_balance(to_account_id, abs(amount), db)
             db.commit()
     
     @staticmethod
@@ -127,13 +131,13 @@ class TransactionModel:
                 WHERE id = ?
             ''', (account_id, new_amount, date, trans_type, payee, category, notes, project, transaction_id))
             
-            # Adjust account balances
+            # Adjust account balances using existing connection
             if old_account_id == account_id:
                 balance_diff = new_amount - old_amount
-                AccountModel.update_balance(old_account_id, balance_diff)
+                AccountModel.update_balance(old_account_id, balance_diff, db)
             else:
-                AccountModel.update_balance(old_account_id, -old_amount)
-                AccountModel.update_balance(account_id, new_amount)
+                AccountModel.update_balance(old_account_id, -old_amount, db)
+                AccountModel.update_balance(account_id, new_amount, db)
             
             db.commit()
             return True
@@ -149,7 +153,7 @@ class TransactionModel:
             
             if trans:
                 db.execute('DELETE FROM transactions WHERE id = ?', (transaction_id,))
-                AccountModel.update_balance(trans['account_id'], -trans['amount'])
+                AccountModel.update_balance(trans['account_id'], -trans['amount'], db)
                 db.commit()
                 return True
             return False

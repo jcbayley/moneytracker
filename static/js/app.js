@@ -20,6 +20,7 @@ async function initializeApp() {
             AccountsComponent.loadAccounts(),
             PayeesAndCategoriesComponent.loadPayees(),
             PayeesAndCategoriesComponent.loadCategories(),
+            ProjectsComponent.loadProjectDropdown(),
             TransactionsComponent.loadTransactions(),
             loadRecurringTransactions(),
             updateAnalytics(),
@@ -39,13 +40,28 @@ async function initializeApp() {
         // Hide filter dropdowns when clicking outside
         document.addEventListener('click', function(event) {
             const filterHeaders = document.querySelectorAll('.filter-header');
+            const filterDropdowns = document.querySelectorAll('.filter-dropdown');
             let clickedInsideFilter = false;
             
+            // Check if clicked inside any filter header or dropdown
             filterHeaders.forEach(header => {
                 if (header.contains(event.target)) {
                     clickedInsideFilter = true;
                 }
             });
+            
+            filterDropdowns.forEach(dropdown => {
+                if (dropdown.contains(event.target)) {
+                    clickedInsideFilter = true;
+                }
+            });
+            
+            // Don't hide if clicking on filter buttons or filter inputs
+            if (event.target.classList.contains('filter-btn') || 
+                event.target.id.includes('filter') ||
+                event.target.id.includes('transaction-date-')) {
+                clickedInsideFilter = true;
+            }
             
             if (!clickedInsideFilter && TransactionsComponent.hideAllFilterDropdowns) {
                 TransactionsComponent.hideAllFilterDropdowns();
@@ -67,6 +83,8 @@ function switchTab(tab) {
         updateDateFilter();
     } else if (tab === 'settings') {
         getDatabaseInfo();
+    } else if (tab === 'projects') {
+        ProjectsComponent.loadProjects();
     }
 }
 

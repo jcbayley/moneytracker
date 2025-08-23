@@ -16,6 +16,7 @@ from app.routes.transactions import transactions_bp
 from app.routes.recurring import recurring_bp
 from app.routes.payees import payees_bp
 from app.routes.categories import categories_bp
+from app.routes.projects import projects_bp
 from app.routes.analytics import analytics_bp
 from app.routes.data import data_bp
 from app.routes.settings import settings_bp
@@ -100,6 +101,7 @@ def create_app():
     app.register_blueprint(recurring_bp)
     app.register_blueprint(payees_bp)
     app.register_blueprint(categories_bp)
+    app.register_blueprint(projects_bp)
     app.register_blueprint(analytics_bp)
     app.register_blueprint(data_bp)
     app.register_blueprint(settings_bp)
@@ -419,6 +421,7 @@ if __name__ == '__main__':
         with app.app_context():
             Database.migrate_add_project_column()
             Database.migrate_add_increment_column()
+            Database.migrate_add_projects_table()
     
     # Start backup system
     start_backup_system(app)

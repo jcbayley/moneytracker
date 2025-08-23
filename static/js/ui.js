@@ -61,7 +61,15 @@ class UI {
         const form = document.getElementById(formId) || document;
         const inputs = form.querySelectorAll('input, select, textarea');
         
+        // Don't clear these filter inputs
+        const filterInputIds = ['transaction-date-from', 'transaction-date-to', 'transaction-account-filter', 'transaction-category-filter', 'transaction-type-filter'];
+        
         inputs.forEach(input => {
+            // Skip filter inputs
+            if (filterInputIds.includes(input.id)) {
+                return;
+            }
+            
             if (input.type === 'checkbox' || input.type === 'radio') {
                 input.checked = false;
             } else if (input.type === 'date') {
@@ -150,7 +158,7 @@ class UI {
      * Set active tab
      */
     static setActiveTab(activeTabId) {
-        const tabs = ['transactions', 'recurring', 'analytics', 'settings'];
+        const tabs = ['transactions', 'recurring', 'projects', 'analytics', 'settings'];
         
         tabs.forEach(tab => {
             const tabElement = document.getElementById(`${tab}-tab`);

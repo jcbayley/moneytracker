@@ -2,6 +2,9 @@
  * Transaction management component
  */
 class TransactionsComponent {
+    static lastTransactionDate = null;
+    static lastTransactionAccount = null;
+    
     static async loadTransactions() {
         try {
             // Build query parameters
@@ -68,9 +71,9 @@ class TransactionsComponent {
                 <td>${t.project || '-'}</td>
                 <td>
                     <button class="btn btn-secondary" style="padding: 5px 8px; font-size: 12px; margin-right: 5px;" 
-                            onclick="TransactionsComponent.editTransaction(${t.id})">✏️</button>
+                            onclick="editTransaction(${t.id})">✏️</button>
                     <button class="btn btn-danger" style="padding: 5px 10px; font-size: 12px;" 
-                            onclick="TransactionsComponent.deleteTransaction(${t.id})">Delete</button>
+                            onclick="deleteTransaction(${t.id})">Delete</button>
                 </td>
             `;
             tbody.appendChild(tr);
@@ -122,15 +125,47 @@ class TransactionsComponent {
             }
 
             await API.createTransaction(data);
-            this.clearForm();
-            AccountsComponent.loadAccounts();
-            this.loadTransactions();
-            RecurringComponent.loadRecurringTransactions();
-            AnalyticsComponent.updateAnalytics();
-            UI.showNotification('Transaction added successfully', 'success');
+            
+            // Store the date and account for reuse
+            this.lastTransactionDate = data.date;
+            this.lastTransactionAccount = data.account_id;
+            
+            try {
+                this.clearForm();
+            } catch (error) {
+                console.error('Error clearing form:', error);
+            }
+            
+            // Refresh UI components with individual error handling
+            try {
+                await AccountsComponent.loadAccounts();
+            } catch (error) {
+                console.error('Error refreshing accounts:', error);
+            }
+            
+            try {
+                await this.loadTransactions();
+            } catch (error) {
+                console.error('Error refreshing transactions:', error);
+            }
+            
+            try {
+                await loadRecurringTransactions();
+            } catch (error) {
+                console.error('Error refreshing recurring transactions:', error);
+            }
+            
+            try {
+                await updateAnalytics();
+            } catch (error) {
+                console.error('Error refreshing analytics:', error);
+            }
+            
+            // Transaction added successfully - no notification needed
         } catch (error) {
             console.error('Error adding transaction:', error);
-            UI.showNotification('Error adding transaction', 'error');
+            const errorMessage = error.message || 'Unknown error occurred';
+            UI.showNotification(`Error adding transaction: ${errorMessage}`, 'error');
         }
     }
 
@@ -142,6 +177,11 @@ class TransactionsComponent {
             if (!transaction) return;
 
             appState.setEditingTransaction(id);
+
+            // Ensure account select is populated
+            const accounts = await API.getAccounts();
+            UI.populateSelect('edit-transaction-account', accounts, 'id', 'name');
+            UI.populateSelect('edit-transfer-account', accounts, 'id', 'name', { value: '', text: 'Select destination account' });
 
             // Populate form
             document.getElementById('edit-transaction-account').value = transaction.account_id;
@@ -213,11 +253,12 @@ class TransactionsComponent {
             this.closeEditTransactionModal();
             AccountsComponent.loadAccounts();
             this.loadTransactions();
-            AnalyticsComponent.updateAnalytics();
-            UI.showNotification('Transaction updated successfully', 'success');
+            updateAnalytics();
+            // Transaction updated successfully - no notification needed
         } catch (error) {
             console.error('Error updating transaction:', error);
-            UI.showNotification('Error updating transaction', 'error');
+            const errorMessage = error.message || 'Unknown error occurred';
+            UI.showNotification(`Error updating transaction: ${errorMessage}`, 'error');
         }
     }
 
@@ -229,7 +270,7 @@ class TransactionsComponent {
             await API.deleteTransaction(id);
             AccountsComponent.loadAccounts();
             this.loadTransactions();
-            AnalyticsComponent.updateAnalytics();
+            updateAnalytics();
             UI.showNotification('Transaction deleted successfully', 'success');
         } catch (error) {
             console.error('Error deleting transaction:', error);
@@ -257,10 +298,30 @@ class TransactionsComponent {
 
     static clearForm() {
         UI.clearForm();
-        document.getElementById('date').valueAsDate = new Date();
+        
+        // Use last transaction date if available, otherwise use today
+        const dateInput = document.getElementById('date');
+        if (this.lastTransactionDate) {
+            dateInput.value = this.lastTransactionDate;
+        } else {
+            dateInput.valueAsDate = new Date();
+        }
+        
+        // Use last transaction account if available
+        const accountSelect = document.getElementById('account-select');
+        if (this.lastTransactionAccount && accountSelect) {
+            accountSelect.value = this.lastTransactionAccount;
+        }
+        
         document.getElementById('type').value = 'expense';
         UI.toggleVisibility('transfer-row', false);
-        UI.toggleVisibility('recurring-section', false);
+        
+        // Reset recurring section - since UI.clearForm() unchecks is-recurring, 
+        // we need to remove the 'active' class from the section
+        const recurringSection = document.getElementById('recurring-section');
+        if (recurringSection) {
+            recurringSection.classList.remove('active');
+        }
     }
 
     static closeEditTransactionModal() {

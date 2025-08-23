@@ -33,14 +33,22 @@ class AccountModel:
             db.commit()
     
     @staticmethod
-    def update_balance(account_id, amount):
+    def update_balance(account_id, amount, db=None):
         """Update account balance by adding amount."""
-        with Database.get_db() as db:
+        if db:
+            # Use existing connection
             db.execute(
                 'UPDATE accounts SET balance = balance + ? WHERE id = ?',
                 (amount, account_id)
             )
-            db.commit()
+        else:
+            # Create new connection (for standalone use)
+            with Database.get_db() as db:
+                db.execute(
+                    'UPDATE accounts SET balance = balance + ? WHERE id = ?',
+                    (amount, account_id)
+                )
+                db.commit()
     
     @staticmethod
     def get_by_id(account_id):

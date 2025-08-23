@@ -19,7 +19,19 @@ class API {
         
         try {
             const response = await fetch(endpoint, options);
-            return await response.json();
+            const data = await response.json();
+            
+            if (!response.ok) {
+                // Server returned an error response
+                const errorMessage = data.error || data.message || `Server error: ${response.status}`;
+                console.error('Server Error:', errorMessage, data);
+                const error = new Error(errorMessage);
+                error.serverResponse = data;
+                error.status = response.status;
+                throw error;
+            }
+            
+            return data;
         } catch (error) {
             console.error('API Error:', error);
             throw error;
@@ -86,6 +98,31 @@ class API {
 
     static async processRecurringTransactions() {
         return this.call('/api/recurring/process', 'POST');
+    }
+
+    // Projects endpoints
+    static async getProjects() {
+        return this.call('/api/projects');
+    }
+
+    static async createProject(projectData) {
+        return this.call('/api/projects', 'POST', projectData);
+    }
+
+    static async updateProject(id, projectData) {
+        return this.call(`/api/projects/${id}`, 'PUT', projectData);
+    }
+
+    static async deleteProject(id) {
+        return this.call(`/api/projects/${id}`, 'DELETE');
+    }
+
+    static async getProjectAnalytics(id) {
+        return this.call(`/api/projects/${id}`);
+    }
+
+    static async getProjectNames() {
+        return this.call('/api/projects/names');
     }
 
     // Analytics endpoints

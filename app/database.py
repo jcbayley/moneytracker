@@ -59,6 +59,24 @@ class Database:
                 db.commit()
     
     @staticmethod
+    def migrate_add_projects_table():
+        """Create projects table if it doesn't exist."""
+        with Database.get_db() as db:
+            # Check if projects table exists
+            cursor = db.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='projects'")
+            if not cursor.fetchone():
+                db.execute('''
+                    CREATE TABLE projects (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        name TEXT NOT NULL UNIQUE,
+                        description TEXT,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )
+                ''')
+                print("Created projects table")
+                db.commit()
+    
+    @staticmethod
     def init_db():
         """Initialize the database with tables."""
         with Database.get_db() as db:
@@ -117,6 +135,13 @@ class Database:
                 CREATE TABLE IF NOT EXISTS categories (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     name TEXT NOT NULL UNIQUE,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                );
+                
+                CREATE TABLE IF NOT EXISTS projects (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    name TEXT NOT NULL UNIQUE,
+                    description TEXT,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 );
             ''')

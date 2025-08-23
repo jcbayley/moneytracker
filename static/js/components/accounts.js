@@ -53,7 +53,7 @@ class AccountsComponent {
                 
                 div.innerHTML = `
                     <div>
-                        <button class="btn-edit" onclick="AccountsComponent.editAccount(${account.id}, '${account.name}', '${account.type}'); event.stopPropagation();">✏️</button>
+                        <button class="btn-edit" onclick="editAccount(${account.id}, '${account.name}', '${account.type}'); event.stopPropagation();">✏️</button>
                     </div>
                     <span>${account.name}</span>
                     <div>

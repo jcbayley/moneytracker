@@ -57,38 +57,80 @@ class RecurringModel:
         today = datetime.now().date()
         processed = 0
         
+        # First, get all recurring transactions that need processing
         with Database.get_db() as db:
             recurring = db.execute('''
                 SELECT * FROM recurring_transactions 
                 WHERE is_active = 1 AND (end_date IS NULL OR end_date >= ?)
             ''', (today,)).fetchall()
+        
+        # Process each recurring transaction separately to avoid database locks
+        for r in recurring:
+            last_processed = datetime.strptime(r['last_processed'], '%Y-%m-%d').date()
+            current_amount = r['amount']
+            try:
+                increment_amount = r['increment_amount'] or 0
+            except (KeyError, IndexError):
+                increment_amount = 0
             
-            for r in recurring:
-                next_date = RecurringModel._calculate_next_date(
-                    datetime.strptime(r['last_processed'], '%Y-%m-%d').date(),
-                    r['frequency']
-                )
+            # Process all missed occurrences up to today
+            next_date = RecurringModel._calculate_next_date(last_processed, r['frequency'])
+            original_last_processed = last_processed
+            
+            while next_date <= today:
+                # Apply increment before creating transaction
+                current_amount += increment_amount
                 
-                if next_date <= today:
-                    # Calculate the new amount with increment
-                    current_amount = r['amount']
-                    increment_amount = r.get('increment_amount', 0)
-                    new_amount = current_amount + increment_amount
+                # Handle transfers differently from regular transactions
+                if r['type'] == 'transfer' and r['payee']:
+                    # For transfers, payee contains the destination account name
+                    # Find the destination account ID by name
+                    with Database.get_db() as db:
+                        dest_account = db.execute(
+                            'SELECT id FROM accounts WHERE name = ?', (r['payee'],)
+                        ).fetchone()
                     
-                    # Create transaction with current amount
+                    if dest_account:
+                        # Create transfer (both debit and credit transactions)
+                        TransactionModel.create_transfer(
+                            r['account_id'], dest_account['id'], 
+                            abs(current_amount), next_date,
+                            r['payee'], r['category'], r['notes'], r['project'], r['id']
+                        )
+                    else:
+                        # Fallback: create single transaction if dest account not found
+                        print(f"Warning: Destination account '{r['payee']}' not found for recurring transfer")
+                        TransactionModel.create(
+                            r['account_id'], -abs(current_amount), next_date, r['type'],
+                            r['payee'], r['category'], r['notes'], r['project'], r['id']
+                        )
+                else:
+                    # Regular transaction (income/expense)
+                    amount = current_amount
+                    if r['type'] == 'expense':
+                        amount = -abs(current_amount)
+                    else:
+                        amount = abs(current_amount)
+                        
                     TransactionModel.create(
-                        r['account_id'], current_amount, next_date, r['type'],
+                        r['account_id'], amount, next_date, r['type'],
                         r['payee'], r['category'], r['notes'], r['project'], r['id']
                     )
-                    
-                    # Update last processed date and increment the amount for next time
+                
+                processed += 1
+                
+                # Update for next iteration
+                last_processed = next_date
+                next_date = RecurringModel._calculate_next_date(next_date, r['frequency'])
+            
+            # Update the database only if this recurring transaction had occurrences
+            if last_processed != original_last_processed:
+                with Database.get_db() as db:
                     db.execute(
                         'UPDATE recurring_transactions SET last_processed = ?, amount = ? WHERE id = ?',
-                        (next_date, new_amount, r['id'])
+                        (last_processed, current_amount, r['id'])
                     )
-                    processed += 1
-            
-            db.commit()
+                    db.commit()
         
         return processed
     
