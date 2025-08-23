@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>com.moneytracker.MoneyTracker</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>MIT</project_license>
+  <name>Money Tracker</name>
+  <summary>Personal finance management application</summary>
+  <description>
+    <p>
+      Money Tracker is a comprehensive personal finance management application that helps you track your income, expenses, and financial goals. Built with Flask and featuring a modern web interface, it provides powerful analytics and reporting capabilities.
+    </p>
+    <p>Features:</p>
+    <ul>
+      <li>Track multiple accounts and transactions</li>
+      <li>Categorize expenses and income</li>
+      <li>Recurring transaction support</li>
+      <li>Analytics and charts</li>
+      <li>Data export functionality</li>
+      <li>Automatic database backups</li>
+    </ul>
+  </description>
+  <launchable type="desktop-id">com.moneytracker.MoneyTracker.desktop</launchable>
+  <url type="homepage">https://github.com/yourusername/moneytracker</url>
+  <url type="bugtracker">https://github.com/yourusername/moneytracker/issues</url>
+  <categories>
+    <category>Office</category>
+    <category>Finance</category>
+  </categories>
+  <keywords>
+    <keyword>money</keyword>
+    <keyword>finance</keyword>
+    <keyword>budget</keyword>
+    <keyword>expense</keyword>
+    <keyword>income</keyword>
+    <keyword>tracker</keyword>
+  </keywords>
+  <content_rating type="oars-1.1"/>
+  <releases>
+    <release version="1.0.0" date="2024-01-01">
+      <description>
+        <p>Initial release of Money Tracker</p>
+        <ul>
+          <li>Basic transaction tracking</li>
+          <li>Account management</li>
+          <li>Analytics dashboard</li>
+          <li>Export functionality</li>
+        </ul>
+      </description>
+    </release>
+  </releases>
+</component>

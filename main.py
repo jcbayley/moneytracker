@@ -95,50 +95,191 @@ def start_backup_system(app):
 
 
 def run_desktop_app(app):
-    """Run the app in a desktop window using webview"""
+    """Run the app in a desktop window using PyQt5"""
+    try:
+        # Try PyQt5 first (most reliable for bundling)
+        from PyQt5.QtWidgets import QApplication, QMainWindow
+        from PyQt5.QtWebEngineWidgets import QWebEngineView
+        from PyQt5.QtCore import QUrl, QTimer
+        from PyQt5.QtGui import QIcon
+        import sys
+        
+        # Create QApplication
+        qt_app = QApplication(sys.argv if sys.argv else ['MoneyTracker'])
+        
+        # Create main window
+        window = QMainWindow()
+        window.setWindowTitle('💰 Money Tracker')
+        window.resize(1400, 900)
+        window.setMinimumSize(800, 600)
+        
+        # Create web engine view
+        webview = QWebEngineView()
+        window.setCentralWidget(webview)
+        
+        def start_flask():
+            app.run(debug=False, host='127.0.0.1', port=5000, use_reloader=False, threaded=True)
+        
+        # Start Flask in a separate thread
+        flask_thread = threading.Thread(target=start_flask, daemon=True)
+        flask_thread.start()
+        
+        def load_app():
+            webview.load(QUrl('http://127.0.0.1:5000'))
+        
+        # Wait for Flask to start, then load the app
+        QTimer.singleShot(2000, load_app)  # 2 second delay
+        
+        # Show window and start Qt event loop
+        window.show()
+        print("🖥️  Opening Money Tracker native window...")
+        
+        # Handle window close event
+        def on_window_close():
+            print("💾 Shutting down Money Tracker...")
+            
+            # Run backup before shutdown
+            try:
+                if hasattr(app, '_backup_manager'):
+                    print("🔄 Creating backup before shutdown...")
+                    backup_manager = getattr(app, '_backup_manager')
+                    backup_file = backup_manager.create_backup()
+                    if backup_file:
+                        print(f"✅ Backup created: {backup_file}")
+                    else:
+                        print("⚠️  Backup failed")
+                else:
+                    print("⚠️  No backup manager available")
+            except Exception as e:
+                print(f"⚠️  Backup error: {e}")
+            
+            qt_app.quit()
+        
+        window.closeEvent = lambda event: on_window_close()
+        
+        try:
+            qt_app.exec_()
+        finally:
+            print("🔄 Server shutdown complete")
+            sys.exit(0)
+        
+    except ImportError as e:
+        print(f"❌ PyQt5 not available: {e}")
+        print("🔄 Trying pywebview fallback...")
+        try_webview_fallback(app)
+    except Exception as e:
+        print(f"❌ Error: Could not start Qt window: {e}")
+        print("🔄 Trying pywebview fallback...")
+        try_webview_fallback(app)
+
+
+def try_webview_fallback(app):
+    """Fallback to pywebview if PyQt5 fails"""
     try:
         import webview
         
         def start_flask():
             app.run(debug=False, host='127.0.0.1', port=5000, use_reloader=False)
         
-        # Start Flask in a separate thread
         flask_thread = threading.Thread(target=start_flask, daemon=True)
         flask_thread.start()
-        
-        # Wait for Flask to start
         time.sleep(2)
         
-        # Create and start the webview window
+        def on_webview_close():
+            """Handle webview window close"""
+            try:
+                if hasattr(app, '_backup_manager'):
+                    print("🔄 Creating backup before shutdown...")
+                    backup_manager = getattr(app, '_backup_manager')
+                    backup_file = backup_manager.create_backup()
+                    if backup_file:
+                        print(f"✅ Backup created: {backup_file}")
+            except Exception as e:
+                print(f"⚠️  Backup error: {e}")
+        
         webview.create_window(
             title='💰 Money Tracker',
             url='http://127.0.0.1:5000',
             width=1400,
             height=900,
             min_size=(800, 600),
-            resizable=True
+            resizable=True,
+            on_top=False
         )
-        webview.start(debug=False)
         
-    except ImportError:
-        print("❌ Error: webview package not installed")
-        print("📦 Install it with: pip install pywebview")
+        try:
+            webview.start(debug=False)
+        finally:
+            on_webview_close()
+        
+    except Exception as e:
+        print(f"❌ Webview also failed: {e}")
         print("🔄 Falling back to browser mode...")
         run_browser_app(app)
 
 
 def run_browser_app(app, host='0.0.0.0', port=5000):
     """Run the app and open in default browser"""
+    import socket
+    import signal
+    
+    # Set up backup on shutdown for browser mode
+    def backup_and_exit(signum, frame):
+        print("\n💾 Shutting down Money Tracker...")
+        try:
+            if hasattr(app, '_backup_manager'):
+                print("🔄 Creating backup before shutdown...")
+                backup_manager = getattr(app, '_backup_manager')
+                backup_file = backup_manager.create_backup()
+                if backup_file:
+                    print(f"✅ Backup created: {backup_file}")
+        except Exception as e:
+            print(f"⚠️  Backup error: {e}")
+        finally:
+            print("🔄 Server shutdown complete")
+            os._exit(0)
+    
+    # Register signal handlers for graceful shutdown
+    signal.signal(signal.SIGINT, backup_and_exit)
+    signal.signal(signal.SIGTERM, backup_and_exit)
+    
+    # Find an available port if the default is in use
+    def find_free_port(start_port):
+        for p in range(start_port, start_port + 100):
+            try:
+                with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                    s.bind(('localhost', p))
+                    return p
+            except OSError:
+                continue
+        return None
+    
+    # Check if port is available
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.bind(('localhost', port))
+    except OSError:
+        print(f"⚠️  Port {port} is in use, finding available port...")
+        port = find_free_port(5000)
+        if port is None:
+            print("❌ No available ports found")
+            return
+        print(f"✅ Using port {port}")
+    
     def open_browser():
         time.sleep(1.5)
         webbrowser.open(f'http://localhost:{port}')
+        print(f"🌐 Money Tracker opened in browser at http://localhost:{port}")
     
     # Start browser opener in background
     browser_thread = threading.Thread(target=open_browser, daemon=True)
     browser_thread.start()
     
-    # Run Flask app
-    app.run(debug=False, host=host, port=port)
+    try:
+        # Run Flask app
+        app.run(debug=False, host=host, port=port)
+    except KeyboardInterrupt:
+        backup_and_exit(None, None)
 
 
 def run_headless(app, host='0.0.0.0', port=5000):

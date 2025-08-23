@@ -1,0 +1,12 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Money Tracker
+Comment=Personal finance management application
+Exec=MoneyTracker
+Icon=MoneyTracker
+Terminal=false
+Categories=Office;Finance;
+Keywords=money;finance;budget;expense;income;tracker;
+StartupNotify=true
+MimeType=application/x-moneytracker;
