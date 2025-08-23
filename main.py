@@ -83,9 +83,14 @@ def start_backup_system(app):
     with app.app_context():
         backup_settings = getattr(app, '_backup_settings', {})
         if backup_settings.get('enabled', True):
+            # Determine backup directory - should be relative to database location
+            db_path = app.config['DATABASE']
+            db_dir = os.path.dirname(os.path.abspath(db_path))
+            backup_dir = os.path.join(db_dir, backup_settings.get('directory', 'backups'))
+            
             backup_manager = BackupManager(
-                db_path=app.config['DATABASE'],
-                backup_dir=backup_settings.get('directory', 'backups'),
+                db_path=db_path,
+                backup_dir=backup_dir,
                 settings=backup_settings
             )
             backup_manager.start_periodic_backup()
