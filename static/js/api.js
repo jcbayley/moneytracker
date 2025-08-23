@@ -124,4 +124,13 @@ class API {
     static async getDatabaseInfo() {
         return this.call('/api/database/info');
     }
+
+    // Settings endpoints
+    static async getSettings() {
+        return this.call('/api/settings');
+    }
+
+    static async saveSettings(settings) {
+        return this.call('/api/settings', 'POST', settings);
+    }
 }

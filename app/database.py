@@ -25,6 +25,28 @@ class Database:
             db.close()
     
     @staticmethod
+    def migrate_add_project_column():
+        """Add project column to existing tables if it doesn't exist."""
+        with Database.get_db() as db:
+            # Check if project column exists in transactions table
+            cursor = db.execute("PRAGMA table_info(transactions)")
+            columns = [column[1] for column in cursor.fetchall()]
+            
+            if 'project' not in columns:
+                db.execute('ALTER TABLE transactions ADD COLUMN project TEXT')
+                print("Added project column to transactions table")
+            
+            # Check if project column exists in recurring_transactions table
+            cursor = db.execute("PRAGMA table_info(recurring_transactions)")
+            columns = [column[1] for column in cursor.fetchall()]
+            
+            if 'project' not in columns:
+                db.execute('ALTER TABLE recurring_transactions ADD COLUMN project TEXT')
+                print("Added project column to recurring_transactions table")
+            
+            db.commit()
+    
+    @staticmethod
     def init_db():
         """Initialize the database with tables."""
         with Database.get_db() as db:
@@ -46,6 +68,7 @@ class Database:
                     payee TEXT,
                     category TEXT,
                     notes TEXT,
+                    project TEXT,
                     recurring_id INTEGER,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     FOREIGN KEY (account_id) REFERENCES accounts (id)
@@ -59,6 +82,7 @@ class Database:
                     payee TEXT,
                     category TEXT,
                     notes TEXT,
+                    project TEXT,
                     frequency TEXT NOT NULL,
                     start_date DATE NOT NULL,
                     end_date DATE,

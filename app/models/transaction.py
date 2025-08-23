@@ -43,14 +43,14 @@ class TransactionModel:
     
     @staticmethod
     def create(account_id, amount, date, trans_type, payee=None, category=None, 
-               notes=None, recurring_id=None):
+               notes=None, project=None, recurring_id=None):
         """Create a single transaction."""
         with Database.get_db() as db:
             cursor = db.execute('''
                 INSERT INTO transactions 
-                (account_id, amount, date, type, payee, category, notes, recurring_id)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            ''', (account_id, amount, date, trans_type, payee, category, notes, recurring_id))
+                (account_id, amount, date, type, payee, category, notes, project, recurring_id)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (account_id, amount, date, trans_type, payee, category, notes, project, recurring_id))
             
             # Update account balance
             AccountModel.update_balance(account_id, amount)
@@ -59,7 +59,7 @@ class TransactionModel:
     
     @staticmethod
     def create_transfer(from_account_id, to_account_id, amount, date, payee=None, 
-                       category=None, notes=None, recurring_id=None):
+                       category=None, notes=None, project=None, recurring_id=None):
         """Create a transfer between accounts (dual transactions)."""
         with Database.get_db() as db:
             # Get account names for payees
@@ -69,20 +69,20 @@ class TransactionModel:
             # From account (negative)
             db.execute('''
                 INSERT INTO transactions 
-                (account_id, amount, date, type, payee, category, notes, recurring_id)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                (account_id, amount, date, type, payee, category, notes, project, recurring_id)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''', (from_account_id, -abs(amount), date, 'transfer',
                   to_account['name'] if to_account else 'Transfer', 
-                  category, notes, recurring_id))
+                  category, notes, project, recurring_id))
             
             # To account (positive)
             db.execute('''
                 INSERT INTO transactions 
-                (account_id, amount, date, type, payee, category, notes, recurring_id)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                (account_id, amount, date, type, payee, category, notes, project, recurring_id)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''', (to_account_id, abs(amount), date, 'transfer',
                   from_account['name'] if from_account else 'Transfer',
-                  category, notes, recurring_id))
+                  category, notes, project, recurring_id))
             
             # Update both account balances
             AccountModel.update_balance(from_account_id, -abs(amount))
@@ -91,7 +91,7 @@ class TransactionModel:
     
     @staticmethod
     def update(transaction_id, account_id, amount, date, trans_type, payee=None,
-               category=None, notes=None, transfer_account_id=None):
+               category=None, notes=None, project=None, transfer_account_id=None):
         """Update an existing transaction."""
         with Database.get_db() as db:
             # Get current transaction
@@ -123,9 +123,9 @@ class TransactionModel:
             # Update transaction
             db.execute('''
                 UPDATE transactions 
-                SET account_id = ?, amount = ?, date = ?, type = ?, payee = ?, category = ?, notes = ?
+                SET account_id = ?, amount = ?, date = ?, type = ?, payee = ?, category = ?, notes = ?, project = ?
                 WHERE id = ?
-            ''', (account_id, new_amount, date, trans_type, payee, category, notes, transaction_id))
+            ''', (account_id, new_amount, date, trans_type, payee, category, notes, project, transaction_id))
             
             # Adjust account balances
             if old_account_id == account_id:

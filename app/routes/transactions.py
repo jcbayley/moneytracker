@@ -18,7 +18,7 @@ def transactions():
             recurring_id = RecurringModel.create(
                 data['account_id'], data['amount'], data['type'],
                 data.get('payee'), data.get('category'), data.get('notes'),
-                data['frequency'], data['date'], data.get('end_date')
+                data.get('project'), data['frequency'], data['date'], data.get('end_date')
             )
         
         # Handle transfer
@@ -27,7 +27,7 @@ def transactions():
                 data['account_id'], data['transfer_account_id'], 
                 abs(data['amount']), data['date'],
                 data.get('payee'), data.get('category'), data.get('notes'),
-                recurring_id
+                data.get('project'), recurring_id
             )
         else:
             # Regular transaction
@@ -40,7 +40,7 @@ def transactions():
             TransactionModel.create(
                 data['account_id'], amount, data['date'], data['type'],
                 data.get('payee'), data.get('category'), data.get('notes'),
-                recurring_id
+                data.get('project'), recurring_id
             )
         
         return jsonify({'message': 'Transaction added'})
@@ -65,7 +65,7 @@ def update_transaction(transaction_id):
     success = TransactionModel.update(
         transaction_id, data['account_id'], data['amount'], 
         data['date'], data['type'], data.get('payee'),
-        data.get('category'), data.get('notes'),
+        data.get('category'), data.get('notes'), data.get('project'),
         data.get('transfer_account_id')
     )
     

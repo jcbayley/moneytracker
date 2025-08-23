@@ -23,7 +23,8 @@ async function initializeApp() {
             TransactionsComponent.loadTransactions(),
             loadRecurringTransactions(),
             updateAnalytics(),
-            getDatabaseInfo()
+            getDatabaseInfo(),
+            loadSettings()
         ]);
 
         // Load theme preference
@@ -522,6 +523,32 @@ async function exportCsv() {
     window.location.href = '/api/export/csv';
 }
 
+// Settings functions
+async function loadSettings() {
+    try {
+        const settings = await API.getSettings();
+        document.getElementById('database-path').value = settings.database_path || 'money_tracker.db';
+    } catch (error) {
+        console.error('Error loading settings:', error);
+    }
+}
+
+async function saveDbLocation() {
+    try {
+        const dbPath = document.getElementById('database-path').value;
+        if (!dbPath) {
+            UI.showNotification('Please enter a database path', 'error');
+            return;
+        }
+        
+        await API.saveSettings({ database_path: dbPath });
+        UI.showNotification('Database location saved. Restart the app to use the new location.', 'success');
+    } catch (error) {
+        console.error('Error saving database location:', error);
+        UI.showNotification('Error saving database location', 'error');
+    }
+}
+
 // Import functions would be implemented similarly...
 
 // Theme functions
@@ -560,5 +587,7 @@ window.showCategoryDetails = showCategoryDetails;
 window.closeCategoryModal = closeCategoryModal;
 window.exportData = exportData;
 window.exportCsv = exportCsv;
+window.loadSettings = loadSettings;
+window.saveDbLocation = saveDbLocation;
 window.toggleTheme = toggleTheme;
 window.toggleSidebar = toggleSidebar;

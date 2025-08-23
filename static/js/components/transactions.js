@@ -65,6 +65,7 @@ class TransactionsComponent {
                 <td>${amountElement.outerHTML}</td>
                 <td>${t.type}</td>
                 <td>${t.notes || '-'}</td>
+                <td>${t.project || '-'}</td>
                 <td>
                     <button class="btn btn-secondary" style="padding: 5px 8px; font-size: 12px; margin-right: 5px;" 
                             onclick="TransactionsComponent.editTransaction(${t.id})">✏️</button>
@@ -89,6 +90,7 @@ class TransactionsComponent {
                 payee: document.getElementById('payee').value,
                 category: category,
                 notes: document.getElementById('notes').value,
+                project: document.getElementById('project').value,
                 is_recurring: document.getElementById('is-recurring').checked,
                 frequency: document.getElementById('frequency').value,
                 end_date: document.getElementById('end-date').value || null
@@ -148,6 +150,7 @@ class TransactionsComponent {
             document.getElementById('edit-transaction-payee').value = transaction.payee || '';
             document.getElementById('edit-transaction-category').value = transaction.category || '';
             document.getElementById('edit-transaction-notes').value = transaction.notes || '';
+            document.getElementById('edit-transaction-project').value = transaction.project || '';
 
             // Handle transfer fields
             if (transaction.type === 'transfer') {
@@ -181,7 +184,8 @@ class TransactionsComponent {
                 type: document.getElementById('edit-transaction-type').value,
                 payee: document.getElementById('edit-transaction-payee').value,
                 category: category,
-                notes: document.getElementById('edit-transaction-notes').value
+                notes: document.getElementById('edit-transaction-notes').value,
+                project: document.getElementById('edit-transaction-project').value
             };
 
             if (!data.account_id || !data.amount || !data.date) {

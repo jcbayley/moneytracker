@@ -89,6 +89,10 @@
                             <label>Notes</label>
                             <input type="text" id="notes" placeholder="Optional notes">
                         </div>
+                        <div class="form-group">
+                            <label>Project</label>
+                            <input type="text" id="project" placeholder="Optional project">
+                        </div>
                     </div>
                     
                     <div style="margin: 15px 0;">
@@ -175,6 +179,7 @@
                                 </div>
                             </th>
                             <th>Notes</th>
+                            <th>Project</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -291,8 +296,15 @@
                         <button class="btn btn-primary" onclick="importCsv()" style="margin-left: 10px;">Import CSV</button>
                     </div>
                     <div style="margin: 20px 0;">
-                        <h4>Database Info</h4>
-                        <p style="color: #6c757d;">Database location: money_tracker.db</p>
+                        <h4>Database Settings</h4>
+                        <div class="form-group" style="margin: 15px 0;">
+                            <label>Database Location</label>
+                            <input type="text" id="database-path" style="width: 70%; display: inline-block;">
+                            <button class="btn btn-primary" onclick="saveDbLocation()" style="margin-left: 10px;">Save Location</button>
+                        </div>
+                        <p style="color: #6c757d; margin: 10px 0; font-size: 12px;">
+                            Note: Changing database location requires app restart to take effect.
+                        </p>
                         <p style="color: #6c757d;" id="db-size">Size: Calculating...</p>
                     </div>
                 </div>
@@ -406,6 +418,10 @@
                 <div class="form-group">
                     <label>Notes</label>
                     <input type="text" id="edit-transaction-notes">
+                </div>
+                <div class="form-group">
+                    <label>Project</label>
+                    <input type="text" id="edit-transaction-project">
                 </div>
             </div>
             <button class="btn btn-primary" onclick="updateTransaction()">Update Transaction</button>

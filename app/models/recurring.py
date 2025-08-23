@@ -27,16 +27,16 @@ class RecurringModel:
             ''').fetchall()
     
     @staticmethod
-    def create(account_id, amount, trans_type, payee, category, notes, frequency, 
-               start_date, end_date=None):
+    def create(account_id, amount, trans_type, payee, category, notes, project, 
+               frequency, start_date, end_date=None):
         """Create a recurring transaction."""
         with Database.get_db() as db:
             cursor = db.execute('''
                 INSERT INTO recurring_transactions 
-                (account_id, amount, type, payee, category, notes, frequency, 
+                (account_id, amount, type, payee, category, notes, project, frequency, 
                  start_date, end_date, last_processed)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ''', (account_id, amount, trans_type, payee, category, notes, 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (account_id, amount, trans_type, payee, category, notes, project,
                   frequency, start_date, end_date, start_date))
             db.commit()
             return cursor.lastrowid
@@ -73,7 +73,7 @@ class RecurringModel:
                     # Create transaction
                     TransactionModel.create(
                         r['account_id'], r['amount'], next_date, r['type'],
-                        r['payee'], r['category'], r['notes'], r['id']
+                        r['payee'], r['category'], r['notes'], r['project'], r['id']
                     )
                     
                     # Update last processed date

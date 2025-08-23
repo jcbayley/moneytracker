@@ -4,6 +4,7 @@ Main application file using modular structure
 """
 from flask import Flask, render_template
 import os
+import json
 import argparse
 import threading
 import time
@@ -17,12 +18,35 @@ from app.routes.payees import payees_bp
 from app.routes.categories import categories_bp
 from app.routes.analytics import analytics_bp
 from app.routes.data import data_bp
+from app.routes.settings import settings_bp
 
+
+def load_settings():
+    """Load settings from settings.json file."""
+    settings_file = 'settings.json'
+    default_settings = {
+        'database_path': 'money_tracker.db'
+    }
+    
+    if os.path.exists(settings_file):
+        try:
+            with open(settings_file, 'r') as f:
+                settings = json.load(f)
+                return {**default_settings, **settings}
+        except:
+            print("Warning: Could not load settings.json, using defaults")
+            return default_settings
+    else:
+        # Create default settings file
+        with open(settings_file, 'w') as f:
+            json.dump(default_settings, f, indent=4)
+        return default_settings
 
 def create_app():
     """Create and configure the Flask application."""
     app = Flask(__name__, static_folder='static', static_url_path='/static')
-    app.config['DATABASE'] = 'money_tracker.db'
+    settings = load_settings()
+    app.config['DATABASE'] = settings['database_path']
     
     # Register blueprints
     app.register_blueprint(accounts_bp)
@@ -32,6 +56,7 @@ def create_app():
     app.register_blueprint(categories_bp)
     app.register_blueprint(analytics_bp)
     app.register_blueprint(data_bp)
+    app.register_blueprint(settings_bp)
     
     @app.route('/')
     def index():
@@ -153,6 +178,9 @@ if __name__ == '__main__':
         print("Database initialized (empty)")
     else:
         print(f"Using existing database: {app.config['DATABASE']}")
+        # Run migrations for existing database
+        with app.app_context():
+            Database.migrate_add_project_column()
     
     # Run based on selected mode
     if args.mode == 'window':
