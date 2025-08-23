@@ -32,51 +32,6 @@
             </div>
             
             <div class="main-content">
-                <div style="background: white; padding: 20px; border-radius: 10px; margin-bottom: 20px;">
-                    <h3 style="margin-bottom: 15px;">Transaction Filters</h3>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label>Account Filter</label>
-                            <select id="transaction-account-filter" onchange="loadTransactions()">
-                                <option value="">All Accounts</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label>Category Filter</label>
-                            <select id="transaction-category-filter" onchange="loadTransactions()">
-                                <option value="">All Categories</option>
-                                <option value="Food">Food</option>
-                                <option value="Bills">Bills</option>
-                                <option value="Bills (Flexible)">Bills (Flexible)</option>
-                                <option value="shopping">Shopping</option>
-                                <option value="Savings">Savings</option>
-                                <option value="takeaway">Takeaway</option>
-                                <option value="drinks">Drinks</option>
-                                <option value="investment">Investment</option>
-                                <option value="Income">Income</option>
-                                <option value="entertainment">Entertainment</option>
-                                <option value="travel">Travel</option>
-                                <option value="eating out">Eating Out</option>
-                                <option value="repayments">Repayments</option>
-                                <option value="General">General</option>
-                                <option value="other">Other</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label>Type Filter</label>
-                            <select id="transaction-type-filter" onchange="loadTransactions()">
-                                <option value="">All Types</option>
-                                <option value="income">Income</option>
-                                <option value="expense">Expense</option>
-                                <option value="transfer">Transfer</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label>Date From</label>
-                            <input type="date" id="transaction-date-from" onchange="loadTransactions()">
-                        </div>
-                    </div>
-                </div>
                 
                 <div style="background: white; padding: 20px; border-radius: 10px; margin-bottom: 20px;">
                     <h3 style="margin-bottom: 15px;">Add Transaction</h3>
@@ -124,24 +79,11 @@
                         </div>
                         <div class="form-group">
                             <label>Category</label>
-                            <select id="category">
-                                <option value="Food">Food</option>
-                                <option value="Bills">Bills</option>
-                                <option value="Bills (Flexible)">Bills (Flexible)</option>
-                                <option value="shopping">Shopping</option>
-                                <option value="Savings">Savings</option>
-                                <option value="takeaway">Takeaway</option>
-                                <option value="drinks">Drinks</option>
-                                <option value="investment">Investment</option>
-                                <option value="Income">Income</option>
-                                <option value="entertainment">Entertainment</option>
-                                <option value="travel">Travel</option>
-                                <option value="eating out">Eating Out</option>
-                                <option value="repayments">Repayments</option>
-                                <option value="General">General</option>
-                                <option value="other">Other</option>
-                                <option value="custom">+ Add New Category</option>
-                            </select>
+                            <div class="searchable-select">
+                                <input type="text" id="category" placeholder="Type to search or select category..." 
+                                       autocomplete="off" onkeyup="filterCategories()" onclick="showCategoryDropdown()" onblur="hideCategoryDropdown()">
+                                <div id="category-dropdown" class="dropdown-content" style="display: none;"></div>
+                            </div>
                         </div>
                         <div class="form-group">
                             <label>Notes</label>
@@ -181,12 +123,57 @@
                 <table>
                     <thead>
                         <tr>
-                            <th>Date</th>
-                            <th>Account</th>
+                            <th class="filter-header">
+                                <div class="header-content">
+                                    <span>Date</span>
+                                    <button class="filter-btn" onclick="toggleDateFilter()" title="Filter by date">📅</button>
+                                </div>
+                                <div id="date-filter-dropdown" class="filter-dropdown" style="display: none;">
+                                    <label>From:</label>
+                                    <input type="date" id="transaction-date-from" onchange="loadTransactions()">
+                                    <label>To:</label>
+                                    <input type="date" id="transaction-date-to" onchange="loadTransactions()">
+                                </div>
+                            </th>
+                            <th class="filter-header">
+                                <div class="header-content">
+                                    <span>Account</span>
+                                    <button class="filter-btn" onclick="toggleAccountFilter()" title="Filter by account">🔽</button>
+                                </div>
+                                <div id="account-filter-dropdown" class="filter-dropdown" style="display: none;">
+                                    <select id="transaction-account-filter" onchange="loadTransactions()">
+                                        <option value="">All Accounts</option>
+                                    </select>
+                                </div>
+                            </th>
                             <th>Payee</th>
-                            <th>Category</th>
+                            <th class="filter-header">
+                                <div class="header-content">
+                                    <span>Category</span>
+                                    <button class="filter-btn" onclick="toggleCategoryFilter()" title="Filter by category">🔽</button>
+                                </div>
+                                <div id="category-filter-dropdown" class="filter-dropdown" style="display: none;">
+                                    <select id="transaction-category-filter" onchange="loadTransactions()">
+                                        <option value="">All Categories</option>
+                                        <!-- Categories will be loaded dynamically -->
+                                    </select>
+                                </div>
+                            </th>
                             <th>Amount</th>
-                            <th>Type</th>
+                            <th class="filter-header">
+                                <div class="header-content">
+                                    <span>Type</span>
+                                    <button class="filter-btn" onclick="toggleTypeFilter()" title="Filter by type">🔽</button>
+                                </div>
+                                <div id="type-filter-dropdown" class="filter-dropdown" style="display: none;">
+                                    <select id="transaction-type-filter" onchange="loadTransactions()">
+                                        <option value="">All Types</option>
+                                        <option value="income">Income</option>
+                                        <option value="expense">Expense</option>
+                                        <option value="transfer">Transfer</option>
+                                    </select>
+                                </div>
+                            </th>
                             <th>Notes</th>
                             <th>Actions</th>
                         </tr>
@@ -410,24 +397,11 @@
                 </div>
                 <div class="form-group">
                     <label>Category</label>
-                    <select id="edit-transaction-category">
-                        <option value="Food">Food</option>
-                        <option value="Bills">Bills</option>
-                        <option value="Bills (Flexible)">Bills (Flexible)</option>
-                        <option value="shopping">Shopping</option>
-                        <option value="Savings">Savings</option>
-                        <option value="takeaway">Takeaway</option>
-                        <option value="drinks">Drinks</option>
-                        <option value="investment">Investment</option>
-                        <option value="Income">Income</option>
-                        <option value="entertainment">Entertainment</option>
-                        <option value="travel">Travel</option>
-                        <option value="eating out">Eating Out</option>
-                        <option value="repayments">Repayments</option>
-                        <option value="General">General</option>
-                        <option value="other">Other</option>
-                        <option value="custom">+ Add New Category</option>
-                    </select>
+                    <div class="searchable-select">
+                        <input type="text" id="edit-transaction-category" placeholder="Type to search or select category..." 
+                               autocomplete="off" onkeyup="filterEditCategories()" onclick="showEditCategoryDropdown()" onblur="hideEditCategoryDropdown()">
+                        <div id="edit-category-dropdown" class="dropdown-content" style="display: none;"></div>
+                    </div>
                 </div>
                 <div class="form-group">
                     <label>Notes</label>
@@ -447,6 +421,13 @@
         </div>
     </div>
 
-    <script src="/static/script.js"></script>
+    <!-- Load modular JavaScript files -->
+    <script src="/static/js/api.js"></script>
+    <script src="/static/js/state.js"></script>
+    <script src="/static/js/ui.js"></script>
+    <script src="/static/js/components/accounts.js"></script>
+    <script src="/static/js/components/transactions.js"></script>
+    <script src="/static/js/components/payees-categories.js"></script>
+    <script src="/static/js/app.js"></script>
 </body>
 </html>

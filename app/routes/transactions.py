@@ -1,0 +1,86 @@
+"""Transaction routes."""
+from flask import Blueprint, request, jsonify
+from ..models.transaction import TransactionModel
+from ..models.recurring import RecurringModel
+
+transactions_bp = Blueprint('transactions', __name__)
+
+
+@transactions_bp.route('/api/transactions', methods=['GET', 'POST'])
+def transactions():
+    """Handle transaction operations."""
+    if request.method == 'POST':
+        data = request.json
+        
+        # Handle recurring transaction creation
+        recurring_id = None
+        if data.get('is_recurring'):
+            recurring_id = RecurringModel.create(
+                data['account_id'], data['amount'], data['type'],
+                data.get('payee'), data.get('category'), data.get('notes'),
+                data['frequency'], data['date'], data.get('end_date')
+            )
+        
+        # Handle transfer
+        if data.get('type') == 'transfer' and data.get('transfer_account_id'):
+            TransactionModel.create_transfer(
+                data['account_id'], data['transfer_account_id'], 
+                abs(data['amount']), data['date'],
+                data.get('payee'), data.get('category'), data.get('notes'),
+                recurring_id
+            )
+        else:
+            # Regular transaction
+            amount = data['amount']
+            if data['type'] == 'expense':
+                amount = -abs(amount)
+            else:
+                amount = abs(amount)
+                
+            TransactionModel.create(
+                data['account_id'], amount, data['date'], data['type'],
+                data.get('payee'), data.get('category'), data.get('notes'),
+                recurring_id
+            )
+        
+        return jsonify({'message': 'Transaction added'})
+    
+    # GET request with filters
+    transactions = TransactionModel.get_filtered(
+        account_id=request.args.get('account_id'),
+        category=request.args.get('category'),
+        trans_type=request.args.get('type'),
+        date_from=request.args.get('date_from'),
+        limit=int(request.args.get('limit', 100))
+    )
+    
+    return jsonify([dict(row) for row in transactions])
+
+
+@transactions_bp.route('/api/transactions/<int:transaction_id>', methods=['PUT'])
+def update_transaction(transaction_id):
+    """Update a transaction."""
+    data = request.json
+    
+    success = TransactionModel.update(
+        transaction_id, data['account_id'], data['amount'], 
+        data['date'], data['type'], data.get('payee'),
+        data.get('category'), data.get('notes'),
+        data.get('transfer_account_id')
+    )
+    
+    if success:
+        return jsonify({'message': 'Transaction updated'})
+    else:
+        return jsonify({'error': 'Transaction not found'}), 404
+
+
+@transactions_bp.route('/api/transactions/<int:transaction_id>', methods=['DELETE'])
+def delete_transaction(transaction_id):
+    """Delete a transaction."""
+    success = TransactionModel.delete(transaction_id)
+    
+    if success:
+        return jsonify({'message': 'Transaction deleted'})
+    else:
+        return jsonify({'error': 'Transaction not found'}), 404
