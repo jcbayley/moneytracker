@@ -47,6 +47,18 @@ class Database:
             db.commit()
     
     @staticmethod
+    def migrate_add_increment_column():
+        """Add increment_amount column to recurring_transactions if it doesn't exist."""
+        with Database.get_db() as db:
+            cursor = db.execute("PRAGMA table_info(recurring_transactions)")
+            columns = [column[1] for column in cursor.fetchall()]
+            
+            if 'increment_amount' not in columns:
+                db.execute('ALTER TABLE recurring_transactions ADD COLUMN increment_amount REAL DEFAULT 0')
+                print("Added increment_amount column to recurring_transactions table")
+                db.commit()
+    
+    @staticmethod
     def init_db():
         """Initialize the database with tables."""
         with Database.get_db() as db:
@@ -87,6 +99,7 @@ class Database:
                     start_date DATE NOT NULL,
                     end_date DATE,
                     last_processed DATE,
+                    increment_amount REAL DEFAULT 0,
                     is_active INTEGER DEFAULT 1,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     FOREIGN KEY (account_id) REFERENCES accounts (id)

@@ -18,7 +18,8 @@ def transactions():
             recurring_id = RecurringModel.create(
                 data['account_id'], data['amount'], data['type'],
                 data.get('payee'), data.get('category'), data.get('notes'),
-                data.get('project'), data['frequency'], data['date'], data.get('end_date')
+                data.get('project'), data['frequency'], data['date'], data.get('end_date'),
+                data.get('increment_amount', 0)
             )
         
         # Handle transfer

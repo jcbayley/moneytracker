@@ -93,7 +93,8 @@ class TransactionsComponent {
                 project: document.getElementById('project').value,
                 is_recurring: document.getElementById('is-recurring').checked,
                 frequency: document.getElementById('frequency').value,
-                end_date: document.getElementById('end-date').value || null
+                end_date: document.getElementById('end-date').value || null,
+                increment_amount: parseFloat(document.getElementById('increment-amount').value) || 0
             };
 
             if (!data.account_id || !data.amount || !data.date) {

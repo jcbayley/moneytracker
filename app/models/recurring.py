@@ -28,16 +28,16 @@ class RecurringModel:
     
     @staticmethod
     def create(account_id, amount, trans_type, payee, category, notes, project, 
-               frequency, start_date, end_date=None):
+               frequency, start_date, end_date=None, increment_amount=0):
         """Create a recurring transaction."""
         with Database.get_db() as db:
             cursor = db.execute('''
                 INSERT INTO recurring_transactions 
                 (account_id, amount, type, payee, category, notes, project, frequency, 
-                 start_date, end_date, last_processed)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                 start_date, end_date, last_processed, increment_amount)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''', (account_id, amount, trans_type, payee, category, notes, project,
-                  frequency, start_date, end_date, start_date))
+                  frequency, start_date, end_date, start_date, increment_amount))
             db.commit()
             return cursor.lastrowid
     
@@ -70,16 +70,21 @@ class RecurringModel:
                 )
                 
                 if next_date <= today:
-                    # Create transaction
+                    # Calculate the new amount with increment
+                    current_amount = r['amount']
+                    increment_amount = r.get('increment_amount', 0)
+                    new_amount = current_amount + increment_amount
+                    
+                    # Create transaction with current amount
                     TransactionModel.create(
-                        r['account_id'], r['amount'], next_date, r['type'],
+                        r['account_id'], current_amount, next_date, r['type'],
                         r['payee'], r['category'], r['notes'], r['project'], r['id']
                     )
                     
-                    # Update last processed date
+                    # Update last processed date and increment the amount for next time
                     db.execute(
-                        'UPDATE recurring_transactions SET last_processed = ? WHERE id = ?',
-                        (next_date, r['id'])
+                        'UPDATE recurring_transactions SET last_processed = ?, amount = ? WHERE id = ?',
+                        (next_date, new_amount, r['id'])
                     )
                     processed += 1
             

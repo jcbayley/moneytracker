@@ -93,7 +93,7 @@ async function loadRecurringTransactions() {
                 <div>
                     <strong>${r.payee || 'Transaction'}</strong> - ${r.account_name}
                     <br>
-                    <small>${r.frequency} | ${r.category || 'No category'} | Next: ${r.next_date}</small>
+                    <small>${r.frequency} | ${r.category || 'No category'} | Next: ${r.next_date}${r.increment_amount ? ` | Inc: ${r.increment_amount > 0 ? '+' : ''}£${r.increment_amount.toFixed(2)}` : ''}</small>
                 </div>
                 <div>
                     ${amountElement.outerHTML}

@@ -418,6 +418,7 @@ if __name__ == '__main__':
         # Run migrations for existing database
         with app.app_context():
             Database.migrate_add_project_column()
+            Database.migrate_add_increment_column()
     
     # Start backup system
     start_backup_system(app)

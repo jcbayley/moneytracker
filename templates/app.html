@@ -118,6 +118,13 @@
                                 <input type="date" id="end-date">
                             </div>
                         </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Increment Amount (Optional)</label>
+                                <input type="number" step="0.01" id="increment-amount" placeholder="0.00">
+                                <small style="color: #6c757d; font-size: 0.8em;">Amount to increase/decrease each cycle (e.g., 0.01 for 1p increase per day)</small>
+                            </div>
+                        </div>
                     </div>
                     
                     <button class="btn btn-primary" onclick="addTransaction()">Add Transaction</button>
