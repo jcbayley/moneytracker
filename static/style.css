@@ -306,9 +306,9 @@ tr:hover {
 .charts-container {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
-    grid-template-rows: repeat(2, 1fr);
+    grid-template-rows: repeat(2, 800px);
     gap: 20px;
-    min-height: 600px;
+    min-height: 1600px;
 }
 
 .chart-card {

@@ -62,6 +62,20 @@ def get_chart_data():
                 'borderColor': '#FF6384',
                 'backgroundColor': 'rgba(255, 99, 132, 0.1)',
                 'tension': 0.4
+            },
+            {
+                'label': 'Savings',
+                'data': [t['savings'] for t in trends],
+                'borderColor': '#4BC0C0',
+                'backgroundColor': 'rgba(75, 192, 192, 0.1)',
+                'tension': 0.4
+            },
+            {
+                'label': 'Investments',
+                'data': [t['investments'] for t in trends],
+                'borderColor': '#9966FF',
+                'backgroundColor': 'rgba(153, 102, 255, 0.1)',
+                'tension': 0.4
             }
         ]
     }

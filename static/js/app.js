@@ -198,12 +198,23 @@ async function updateCharts() {
                     data: chartData.category,
                     options: { 
                         responsive: true, 
-                        maintainAspectRatio: true,
+                        maintainAspectRatio: false,
                         onClick: (event, elements) => {
                             if (elements.length > 0) {
                                 const index = elements[0].index;
                                 const category = chartData.category.labels[index];
                                 showCategoryDetails(category);
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                                labels: {
+                                    font: {
+                                        size: 14
+                                    },
+                                    boxWidth: 12
+                                }
                             }
                         }
                     }
@@ -221,8 +232,34 @@ async function updateCharts() {
                     data: chartData.trend,
                     options: {
                         responsive: true,
-                        maintainAspectRatio: true,
-                        scales: { y: { beginAtZero: true } }
+                        maintainAspectRatio: false,
+                        scales: { 
+                            x: {
+                                ticks: {
+                                    font: {
+                                        size: 14
+                                    }
+                                }
+                            },
+                            y: { 
+                                beginAtZero: true,
+                                ticks: {
+                                    font: {
+                                        size: 14
+                                    }
+                                }
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                                labels: {
+                                    font: {
+                                        size: 14
+                                    }
+                                }
+                            }
+                        }
                     }
                 });
                 appState.setChart('trend', trendChart);
@@ -238,29 +275,88 @@ async function updateCharts() {
                     data: chartData.accounts,
                     options: {
                         responsive: true,
-                        maintainAspectRatio: true,
-                        scales: { y: { beginAtZero: true } }
+                        maintainAspectRatio: false,
+                        scales: { 
+                            x: {
+                                ticks: {
+                                    font: {
+                                        size: 14
+                                    }
+                                }
+                            },
+                            y: { 
+                                beginAtZero: true,
+                                ticks: {
+                                    font: {
+                                        size: 14
+                                    }
+                                }
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                                labels: {
+                                    font: {
+                                        size: 14
+                                    }
+                                }
+                            }
+                        }
                     }
                 });
                 appState.setChart('account', accountChart);
             }
         }
         
-        // Category Trends Chart (Multi-line)
+        // Category Trends Chart (Stacked Bar)
         if (chartData.category_trends && chartData.category_trends.labels.length > 0) {
             const ctx4 = document.getElementById('categoryTrendsChart')?.getContext('2d');
             if (ctx4) {
+                // Remove alpha from colors
+                const datasetsWithoutAlpha = chartData.category_trends.datasets.map(dataset => ({
+                    ...dataset,
+                    backgroundColor: dataset.borderColor,
+                    borderWidth: 1
+                }));
+                
                 const categoryTrendsChart = new Chart(ctx4, {
-                    type: 'line',
-                    data: chartData.category_trends,
+                    type: 'bar',
+                    data: {
+                        ...chartData.category_trends,
+                        datasets: datasetsWithoutAlpha
+                    },
                     options: { 
                         responsive: true,
-                        maintainAspectRatio: true,
-                        scales: { y: { beginAtZero: true } },
+                        maintainAspectRatio: false,
+                        scales: { 
+                            x: { 
+                                stacked: true,
+                                ticks: {
+                                    font: {
+                                        size: 14
+                                    }
+                                }
+                            },
+                            y: { 
+                                stacked: true,
+                                beginAtZero: true,
+                                ticks: {
+                                    font: {
+                                        size: 14
+                                    }
+                                }
+                            }
+                        },
                         plugins: {
                             legend: {
                                 display: true,
-                                position: 'bottom'
+                                position: 'bottom',
+                                labels: {
+                                    font: {
+                                        size: 14
+                                    }
+                                }
                             }
                         }
                     }

@@ -93,7 +93,7 @@ class AnalyticsModel:
     
     @staticmethod
     def get_monthly_trend(start_date=None, end_date=None, account_types=None):
-        """Get monthly income/expense trend."""
+        """Get monthly income/expense/savings/investment trend."""
         with Database.get_db() as db:
             date_filter = ''
             account_filter = ''
@@ -118,10 +118,18 @@ class AnalyticsModel:
                 SELECT 
                     strftime('%Y-%m', t.date) as month,
                     SUM(CASE WHEN t.type = 'income' THEN t.amount ELSE 0 END) as income,
-                    SUM(CASE WHEN t.type = 'expense' THEN ABS(t.amount) ELSE 0 END) as expenses
+                    SUM(CASE WHEN t.type = 'expense' THEN ABS(t.amount) ELSE 0 END) as expenses,
+                    SUM(CASE 
+                        WHEN t.type = 'transfer' AND t.amount > 0 AND a.type = 'savings' THEN t.amount 
+                        ELSE 0 
+                    END) as savings,
+                    SUM(CASE 
+                        WHEN t.type = 'transfer' AND t.amount > 0 AND a.type = 'investment' THEN t.amount 
+                        ELSE 0 
+                    END) as investments
                 FROM transactions t
                 JOIN accounts a ON t.account_id = a.id
-                WHERE t.type != 'transfer'{date_filter}{account_filter}
+                WHERE 1=1{date_filter}{account_filter}
                 GROUP BY month
                 ORDER BY month DESC
                 LIMIT 6
