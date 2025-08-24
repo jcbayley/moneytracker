@@ -41,6 +41,11 @@ const TransactionsComponent = {
                 filters.date_to = dateTo.value;
             }
             
+            const searchInput = document.getElementById('transaction-search');
+            if (searchInput && searchInput.value.trim()) {
+                filters.search = searchInput.value.trim();
+            }
+            
             const transactions = await API.getTransactions(filters);
             this.renderTransactionsList(transactions);
         } catch (error) {
@@ -364,6 +369,14 @@ const TransactionsComponent = {
         dropdowns.forEach(id => {
             UI.toggleVisibility(id, false);
         });
+    },
+
+    clearSearch() {
+        const searchInput = document.getElementById('transaction-search');
+        if (searchInput) {
+            searchInput.value = '';
+            this.loadTransactions();
+        }
     }
 };
 
@@ -384,3 +397,13 @@ window.toggleDateFilter = () => TransactionsComponent.toggleDateFilter();
 window.toggleAccountFilter = () => TransactionsComponent.toggleAccountFilter();
 window.toggleCategoryFilter = () => TransactionsComponent.toggleCategoryFilter();
 window.toggleTypeFilter = () => TransactionsComponent.toggleTypeFilter();
+
+// Search functions
+let searchTimeout;
+window.debounceSearch = () => {
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(() => {
+        TransactionsComponent.loadTransactions();
+    }, 300);
+};
+window.clearSearch = () => TransactionsComponent.clearSearch();

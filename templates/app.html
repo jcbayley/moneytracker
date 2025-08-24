@@ -136,6 +136,16 @@
                     <button class="btn btn-secondary" onclick="clearForm()">Clear</button>
                 </div>
                 
+                <div style="background: white; padding: 15px; border-radius: 10px; margin-bottom: 20px;">
+                    <div style="display: flex; align-items: center; gap: 15px;">
+                        <label style="font-weight: 500; color: #333;">Search Transactions:</label>
+                        <input type="text" id="transaction-search" placeholder="Search payees, notes, categories, amounts..." 
+                               style="flex: 1; padding: 8px; border: 1px solid #ddd; border-radius: 5px;" 
+                               onkeyup="debounceSearch()" oninput="debounceSearch()">
+                        <button class="btn btn-secondary" onclick="clearSearch()">Clear</button>
+                    </div>
+                </div>
+                
                 <table>
                     <thead>
                         <tr>
