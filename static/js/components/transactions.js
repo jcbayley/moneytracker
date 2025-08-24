@@ -90,6 +90,10 @@ const TransactionsComponent = {
             // Get category value from input
             let category = document.getElementById('category').value;
 
+            // Get recurring data from modal (if it was opened)
+            const isRecurringCheckbox = document.getElementById('modal-is-recurring');
+            const isRecurring = isRecurringCheckbox ? isRecurringCheckbox.checked : false;
+            
             const data = {
                 account_id: document.getElementById('account-select').value,
                 amount: parseFloat(document.getElementById('amount').value),
@@ -99,10 +103,10 @@ const TransactionsComponent = {
                 category: category,
                 notes: document.getElementById('notes').value,
                 project: document.getElementById('project').value,
-                is_recurring: document.getElementById('is-recurring').checked,
-                frequency: document.getElementById('frequency').value,
-                end_date: document.getElementById('end-date').value || null,
-                increment_amount: parseFloat(document.getElementById('increment-amount').value) || 0
+                is_recurring: isRecurring,
+                frequency: isRecurring ? document.getElementById('modal-frequency').value : null,
+                end_date: isRecurring ? (document.getElementById('modal-end-date').value || null) : null,
+                increment_amount: isRecurring ? (parseFloat(document.getElementById('modal-increment-amount').value) || 0) : 0
             };
 
             if (!data.account_id || !data.amount || !data.date) {
@@ -377,6 +381,28 @@ const TransactionsComponent = {
             searchInput.value = '';
             this.loadTransactions();
         }
+    },
+
+    showRecurringModal() {
+        const modal = document.getElementById('recurringModal');
+        if (modal) {
+            modal.style.display = 'block';
+        }
+    },
+
+    closeRecurringModal() {
+        const modal = document.getElementById('recurringModal');
+        if (modal) {
+            modal.style.display = 'none';
+        }
+    },
+
+    toggleRecurringOptions() {
+        const checkbox = document.getElementById('modal-is-recurring');
+        const section = document.getElementById('modal-recurring-section');
+        if (checkbox && section) {
+            section.style.display = checkbox.checked ? 'block' : 'none';
+        }
     }
 };
 
@@ -407,3 +433,8 @@ window.debounceSearch = () => {
     }, 300);
 };
 window.clearSearch = () => TransactionsComponent.clearSearch();
+
+// Recurring modal functions
+window.showRecurringModal = () => TransactionsComponent.showRecurringModal();
+window.closeRecurringModal = () => TransactionsComponent.closeRecurringModal();
+window.toggleRecurringOptions = () => TransactionsComponent.toggleRecurringOptions();

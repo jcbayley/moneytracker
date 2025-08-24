@@ -188,6 +188,7 @@ function closeCategoryModal() {
     ChartManager.closeCategoryModal();
 }
 
+
 // Database functions
 async function getDatabaseInfo() {
     try {
