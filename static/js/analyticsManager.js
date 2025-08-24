@@ -73,7 +73,7 @@ const AnalyticsManager = {
     getDateInputElements() {
         return {
             startDate: Utils.getElement('start-date'),
-            endDate: Utils.getElement('end-date'),
+            endDate: Utils.getElement('analytics-end-date'),
             prevBtn: Utils.getElement('prev-month'),
             nextBtn: Utils.getElement('next-month'),
             currentPeriodSpan: Utils.getElement('current-period')
@@ -82,16 +82,28 @@ const AnalyticsManager = {
 
     // Reset date controls - clear responsibility
     resetDateControls({ startDate, endDate, prevBtn, nextBtn }) {
-        if (startDate) startDate.disabled = true;
-        if (endDate) endDate.disabled = true;
+        if (startDate) {
+            startDate.disabled = true;
+            startDate.setAttribute('disabled', 'disabled');
+        }
+        if (endDate) {
+            endDate.disabled = true;
+            endDate.setAttribute('disabled', 'disabled');
+        }
         if (prevBtn) Utils.hideElement(prevBtn);
         if (nextBtn) Utils.hideElement(nextBtn);
     },
 
     // Enable custom date inputs - focused function
     enableCustomDateInputs({ startDate, endDate, currentPeriodSpan }) {
-        if (startDate) startDate.disabled = false;
-        if (endDate) endDate.disabled = false;
+        if (startDate) {
+            startDate.disabled = false;
+            startDate.removeAttribute('disabled');
+        }
+        if (endDate) {
+            endDate.disabled = false;
+            endDate.removeAttribute('disabled');
+        }
         if (currentPeriodSpan) currentPeriodSpan.textContent = 'Custom Range';
     },
 

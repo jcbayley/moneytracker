@@ -281,7 +281,7 @@
                         </div>
                         <div class="form-group">
                             <label>End Date</label>
-                            <input type="date" id="end-date" onchange="updateAnalytics()" disabled>
+                            <input type="date" id="analytics-end-date" onchange="updateAnalytics()" disabled>
                         </div>
                         <div class="form-group">
                             <label>Account Types</label>
@@ -482,7 +482,11 @@
                 </div>
                 <div class="form-group">
                     <label>Project</label>
-                    <input type="text" id="edit-transaction-project">
+                    <div class="searchable-select">
+                        <input type="text" id="edit-transaction-project" placeholder="Type to search or select project..." 
+                               autocomplete="off" onkeyup="filterEditProjects()" onclick="showEditProjectDropdown()" onblur="hideEditProjectDropdown()">
+                        <div id="edit-project-dropdown" class="dropdown-content" style="display: none;"></div>
+                    </div>
                 </div>
             </div>
             <button class="btn btn-primary" onclick="updateTransaction()">Update Transaction</button>

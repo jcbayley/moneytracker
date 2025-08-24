@@ -39,7 +39,7 @@ const ChartManager = {
         
         // Get date range
         const startDate = Utils.getElement('start-date')?.value;
-        const endDate = Utils.getElement('end-date')?.value;
+        const endDate = Utils.getElement('analytics-end-date')?.value;
         
         if (startDate) filters.start_date = startDate;
         if (endDate) filters.end_date = endDate;
@@ -185,7 +185,7 @@ const ChartManager = {
         const chart = new Chart(ctx, {
             type: 'bar',
             data: chartData,
-            options: ChartManager.getStackedBarChartOptions()
+            options: ChartManager.getStackedBarChartOptions(chartData)
         });
         
         appState.setChart('categoryTrends', chart);
@@ -207,10 +207,19 @@ const ChartManager = {
     },
 
     // Stacked bar chart options
-    getStackedBarChartOptions() {
+    getStackedBarChartOptions(chartData) {
         return { 
             responsive: Config.get('CHARTS.RESPONSIVE'),
             maintainAspectRatio: Config.get('CHARTS.MAINTAIN_ASPECT_RATIO'),
+            onClick: (event, elements) => {
+                if (elements.length > 0) {
+                    const datasetIndex = elements[0].datasetIndex;
+                    const monthIndex = elements[0].index;
+                    const category = chartData.datasets[datasetIndex].label;
+                    const month = chartData.labels[monthIndex];
+                    ChartManager.showCategoryDetailsForMonth(category, month);
+                }
+            },
             scales: { 
                 x: { 
                     stacked: true,
@@ -245,6 +254,41 @@ const ChartManager = {
         await safeShow();
     },
 
+    // Show category details for specific month (for bar chart)
+    async showCategoryDetailsForMonth(category, month) {
+        const safeShow = safeAsync(async () => {
+            const filters = ChartManager.getAnalyticsFilters();
+            
+            // Calculate start and end dates for the specific month
+            const monthFilters = ChartManager.getMonthFilters(month, filters);
+            
+            const transactions = await API.getCategoryTransactions(category, monthFilters);
+            
+            ChartManager.displayCategoryModalForMonth(category, month, transactions);
+            
+        }, 'loading category details for month');
+        
+        await safeShow();
+    },
+
+    // Get month-specific filters
+    getMonthFilters(month, baseFilters) {
+        // Month format is typically "2024-01" or similar
+        const [year, monthNum] = month.split('-');
+        const startDate = `${year}-${monthNum.padStart(2, '0')}-01`;
+        
+        // Get last day of month
+        const nextMonth = new Date(parseInt(year), parseInt(monthNum), 1);
+        const lastDay = new Date(nextMonth.getTime() - 1);
+        const endDate = lastDay.toISOString().split('T')[0];
+        
+        return {
+            ...baseFilters,
+            start_date: startDate,
+            end_date: endDate
+        };
+    },
+
     // Display category modal - separated UI logic
     displayCategoryModal(category, transactions) {
         const titleElement = Utils.getElement('category-modal-title');
@@ -252,6 +296,32 @@ const ChartManager = {
         
         if (titleElement) {
             titleElement.textContent = `${category} Transactions`;
+        }
+        
+        if (tableContainer) {
+            if (transactions.length === 0) {
+                tableContainer.innerHTML = ChartManager.getEmptyTransactionsMessage();
+            } else {
+                tableContainer.innerHTML = ChartManager.createTransactionsTable(transactions);
+            }
+        }
+        
+        UI.showModal('categoryDetailsModal');
+    },
+
+    // Display category modal for specific month
+    displayCategoryModalForMonth(category, month, transactions) {
+        const titleElement = Utils.getElement('category-modal-title');
+        const tableContainer = Utils.getElement('category-transactions-table');
+        
+        if (titleElement) {
+            // Format month for display (e.g., "2024-01" -> "January 2024")
+            const monthDate = new Date(month + '-01');
+            const monthName = monthDate.toLocaleDateString('en-US', { 
+                month: 'long', 
+                year: 'numeric' 
+            });
+            titleElement.textContent = `${category} Transactions - ${monthName}`;
         }
         
         if (tableContainer) {

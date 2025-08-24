@@ -31,16 +31,40 @@ def get_chart_data():
     end_date = request.args.get('end_date')
     account_types = request.args.getlist('account_types')
     
+    def get_category_color(category_name, index):
+        """Generate consistent colors for categories based on name and index."""
+        # Expanded color palette with 36 distinct colors
+        base_colors = [
+            '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40', 
+            '#C9CBCF', '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', 
+            '#DDA0DD', '#98D8C8', '#F7DC6F', '#BB8FCE', '#85C1E9', '#F8C471', 
+            '#82E0AA', '#F1948A', '#A9DFBF', '#F9E79F', '#AED6F1', '#F8D7DA',
+            '#D5DBDB', '#FADBD8', '#E8DAEF', '#D6EAF8', '#D1F2EB', '#FCF3CF',
+            '#EBDEF0', '#D6F9D6', '#FFE4E1', '#E0F2E7', '#FFF0F5', '#F0FFFF'
+        ]
+        
+        if index < len(base_colors):
+            return base_colors[index]
+        else:
+            # Generate additional colors using golden angle for good distribution
+            hue = (index * 137.5) % 360
+            saturation = 65 + (index % 3) * 10  # Vary saturation slightly
+            lightness = 55 + (index % 4) * 5    # Vary lightness slightly
+            return f'hsl({hue}, {saturation}%, {lightness}%)'
+    
     # Category spending
     categories = analytics.get_category_spending(start_date, end_date, account_types)
+    
+    # Create consistent color mapping for all charts
+    category_color_map = {}
+    for i, category in enumerate(categories):
+        category_color_map[category['category']] = get_category_color(category['category'], i)
+    
     category_data = {
         'labels': [c['category'] for c in categories],
         'datasets': [{
             'data': [c['total'] for c in categories],
-            'backgroundColor': [
-                '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0',
-                '#9966FF', '#FF9F40', '#FF6384', '#C9CBCF'
-            ][:len(categories)]
+            'backgroundColor': [category_color_map[c['category']] for c in categories]
         }]
     }
     
@@ -115,26 +139,37 @@ def get_chart_data():
         category_data_by_month[category][month] = total
     
     # Convert to chart format
-    sorted_months = sorted(list(months))[-6:]  # Last 6 months
-    all_categories = sorted(list(categories_set))
+    sorted_months = sorted(list(months))[-12:]  # Last 12 months
+    # Use same category order as pie chart for consistency
+    all_categories = [c['category'] for c in categories if c['category'] in categories_set]
+    # Add any remaining categories not in the main spending list
+    remaining_categories = sorted(list(categories_set - set(all_categories)))
+    all_categories.extend(remaining_categories)
     
     category_trend_data = {
         'labels': sorted_months,
         'datasets': []
     }
     
-    colors = ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40', '#FF6384', '#C9CBCF', '#4BC0C0', '#FF6384']
-    
     for i, category in enumerate(all_categories):
         data = []
         for month in sorted_months:
             data.append(category_data_by_month.get(category, {}).get(month, 0))
         
+        # Use consistent color - if category is in the main categories, use existing color, else generate new
+        if category in category_color_map:
+            color = category_color_map[category]
+        else:
+            # For categories not in main spending list, get color based on total index
+            main_category_count = len([c for c in categories])
+            new_index = main_category_count + remaining_categories.index(category)
+            color = get_category_color(category, new_index)
+        
         category_trend_data['datasets'].append({
             'label': category,
             'data': data,
-            'borderColor': colors[i % len(colors)],
-            'backgroundColor': colors[i % len(colors)] + '20',
+            'borderColor': color,
+            'backgroundColor': color + '40',  # Add transparency for bar chart
             'tension': 0.4
         })
     

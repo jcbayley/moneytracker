@@ -379,6 +379,90 @@ const ProjectsComponent = {
         setTimeout(() => {
             document.getElementById('project-dropdown').style.display = 'none';
         }, 200);
+    },
+
+    /**
+     * Load project dropdown for edit transaction form
+     */
+    async loadEditProjectDropdown() {
+        try {
+            const projectNames = await API.getProjectNames();
+            const dropdown = document.getElementById('edit-project-dropdown');
+            
+            if (!dropdown) return;
+            
+            dropdown.innerHTML = '';
+            
+            // Add "Create New Project" option
+            const createOption = document.createElement('div');
+            createOption.className = 'dropdown-item';
+            createOption.textContent = '+ Create New Project';
+            createOption.style.fontStyle = 'italic';
+            createOption.style.color = '#007bff';
+            createOption.onclick = () => {
+                document.getElementById('edit-transaction-project').value = '';
+                this.hideEditProjectDropdown();
+                this.showCreateProjectModal();
+            };
+            dropdown.appendChild(createOption);
+            
+            if (projectNames.length > 0) {
+                // Add separator
+                const separator = document.createElement('div');
+                separator.style.borderTop = '1px solid #dee2e6';
+                separator.style.margin = '5px 0';
+                dropdown.appendChild(separator);
+                
+                // Add existing projects
+                projectNames.forEach(project => {
+                    const option = document.createElement('div');
+                    option.className = 'dropdown-item';
+                    option.textContent = project.name;
+                    option.onclick = () => {
+                        document.getElementById('edit-transaction-project').value = project.name;
+                        this.hideEditProjectDropdown();
+                    };
+                    dropdown.appendChild(option);
+                });
+            }
+        } catch (error) {
+            console.error('Error loading edit project dropdown:', error);
+        }
+    },
+    
+    /**
+     * Filter projects in edit dropdown
+     */
+    filterEditProjects() {
+        const searchTerm = document.getElementById('edit-transaction-project').value.toLowerCase();
+        const dropdown = document.getElementById('edit-project-dropdown');
+        const items = dropdown.querySelectorAll('.dropdown-item');
+        
+        items.forEach(item => {
+            if (item.textContent.includes('Create New Project')) {
+                item.style.display = 'block'; // Always show create option
+            } else {
+                const isMatch = item.textContent.toLowerCase().includes(searchTerm);
+                item.style.display = isMatch ? 'block' : 'none';
+            }
+        });
+    },
+    
+    /**
+     * Show edit project dropdown
+     */
+    showEditProjectDropdown() {
+        this.loadEditProjectDropdown();
+        document.getElementById('edit-project-dropdown').style.display = 'block';
+    },
+    
+    /**
+     * Hide edit project dropdown
+     */
+    hideEditProjectDropdown() {
+        setTimeout(() => {
+            document.getElementById('edit-project-dropdown').style.display = 'none';
+        }, 200);
     }
 };
 
@@ -393,3 +477,6 @@ window.closeProjectModal = () => ProjectsComponent.closeProjectModal();
 window.filterProjects = () => ProjectsComponent.filterProjects();
 window.showProjectDropdown = () => ProjectsComponent.showProjectDropdown();
 window.hideProjectDropdown = () => ProjectsComponent.hideProjectDropdown();
+window.filterEditProjects = () => ProjectsComponent.filterEditProjects();
+window.showEditProjectDropdown = () => ProjectsComponent.showEditProjectDropdown();
+window.hideEditProjectDropdown = () => ProjectsComponent.hideEditProjectDropdown();
