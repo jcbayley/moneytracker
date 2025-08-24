@@ -19,6 +19,7 @@
             <button class="tab" onclick="switchTab('recurring')">Recurring</button>
             <button class="tab" onclick="switchTab('projects')">Projects</button>
             <button class="tab" onclick="switchTab('analytics')">Analytics</button>
+            <button class="tab" onclick="switchTab('ai-query')">AI Query</button>
             <button class="tab" onclick="switchTab('settings')">Settings</button>
         </div>
 
@@ -340,6 +341,77 @@
             </div>
         </div>
 
+        <div id="ai-query-tab" class="content hidden">
+            <div class="main-content" style="width: 100%;">
+                <div style="background: white; padding: 20px; border-radius: 10px;">
+                    <h3>🤖 AI Transaction Query</h3>
+                    <p style="color: #6c757d; margin-bottom: 20px;">Ask questions about your transactions in natural language. The AI will search and summarize your financial data.</p>
+                    
+                    <!-- Model Status Section -->
+                    <div id="model-status-section" style="background: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <strong>AI Model Status:</strong> 
+                                <span id="model-status">Not Downloaded</span>
+                                <div id="model-info" style="font-size: 12px; color: #6c757d; margin-top: 5px;">
+                                    Default model: Qwen2.5-0.5B-Instruct (500MB) - Optimized for financial queries
+                                </div>
+                            </div>
+                            <div>
+                                <button class="btn btn-primary" onclick="downloadModel()" id="download-model-btn">Download Model</button>
+                                <button class="btn btn-secondary" onclick="checkModelStatus()" id="check-status-btn" style="margin-left: 10px;">Check Status</button>
+                            </div>
+                        </div>
+                        <div id="download-progress" class="hidden" style="margin-top: 15px;">
+                            <div style="background: #e9ecef; border-radius: 4px; overflow: hidden;">
+                                <div id="progress-bar" style="background: #007bff; height: 20px; width: 0%; transition: width 0.3s;"></div>
+                            </div>
+                            <div id="progress-text" style="text-align: center; margin-top: 5px; font-size: 12px;"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group" style="margin-bottom: 20px;">
+                        <label for="ai-query-input">Ask a question about your transactions:</label>
+                        <div style="display: flex; gap: 10px; margin-top: 10px;">
+                            <input type="text" id="ai-query-input" placeholder="e.g., 'How much did I spend on food last month?' or 'Show me all transactions over $100'" style="flex: 1; padding: 10px; font-size: 16px;">
+                            <button class="btn btn-primary" onclick="submitAIQuery()" id="ai-query-btn">Ask AI</button>
+                        </div>
+                    </div>
+                    
+                    <div id="ai-query-examples" style="margin-bottom: 20px;">
+                        <small style="color: #6c757d;">Example queries:</small>
+                        <div style="margin-top: 5px;">
+                            <button class="btn btn-secondary" style="font-size: 12px; padding: 5px 10px; margin: 2px;" onclick="setExampleQuery('How much did I spend on groceries this year?')">Grocery spending</button>
+                            <button class="btn btn-secondary" style="font-size: 12px; padding: 5px 10px; margin: 2px;" onclick="setExampleQuery('What are my biggest expenses?')">Biggest expenses</button>
+                            <button class="btn btn-secondary" style="font-size: 12px; padding: 5px 10px; margin: 2px;" onclick="setExampleQuery('Show me transactions with Amazon')">Amazon purchases</button>
+                            <button class="btn btn-secondary" style="font-size: 12px; padding: 5px 10px; margin: 2px;" onclick="setExampleQuery('How much income did I have last month?')">Monthly income</button>
+                        </div>
+                    </div>
+                    
+                    <div id="ai-loading" class="hidden" style="text-align: center; padding: 20px;">
+                        <div style="font-size: 18px;">🤔 AI is thinking...</div>
+                        <div style="color: #6c757d; margin-top: 10px;">Analyzing your transactions and generating insights...</div>
+                    </div>
+                    
+                    <div id="ai-results" class="hidden" style="margin-top: 20px;">
+                        <h4>AI Response:</h4>
+                        <div id="ai-response" style="background: #f8f9fa; padding: 15px; border-radius: 8px; border-left: 4px solid #007bff; margin: 10px 0;"></div>
+                        
+                        <!-- Database Query Section -->
+                        <div id="ai-query-section" class="hidden" style="margin-top: 20px;">
+                            <h5>Database Query Used:</h5>
+                            <div id="ai-database-query" style="background: #f1f3f4; padding: 12px; border-radius: 6px; font-family: monospace; font-size: 12px; color: #333; white-space: pre-wrap; border-left: 3px solid #28a745; margin: 10px 0;"></div>
+                        </div>
+                        
+                        <div id="ai-data-section" class="hidden" style="margin-top: 20px;">
+                            <h5>Related Transactions:</h5>
+                            <div id="ai-transactions-table" style="max-height: 400px; overflow-y: auto; border: 1px solid #dee2e6; border-radius: 5px;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div id="settings-tab" class="content hidden">
             <div class="main-content" style="width: 100%;">
                 <div style="background: white; padding: 20px; border-radius: 10px;">
@@ -544,6 +616,7 @@
     <script src="/static/js/components/transactions.js"></script>
     <script src="/static/js/components/payees-categories.js"></script>
     <script src="/static/js/components/projects.js"></script>
+    <script src="/static/js/components/ai-query.js"></script>
     
     <!-- Load main application file last -->
     <script src="/static/js/app.js"></script>

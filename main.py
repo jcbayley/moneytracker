@@ -18,6 +18,7 @@ from app.routes.payees import payees_bp
 from app.routes.categories import categories_bp
 from app.routes.projects import projects_bp
 from app.routes.analytics import analytics_bp
+from app.routes.ai_query import ai_query_bp
 from app.routes.data import data_bp
 from app.routes.settings import settings_bp
 from app.routes.backup import backup_bp
@@ -103,6 +104,7 @@ def create_app():
     app.register_blueprint(categories_bp)
     app.register_blueprint(projects_bp)
     app.register_blueprint(analytics_bp)
+    app.register_blueprint(ai_query_bp)
     app.register_blueprint(data_bp)
     app.register_blueprint(settings_bp)
     app.register_blueprint(backup_bp)

@@ -170,4 +170,9 @@ class API {
     static async saveSettings(settings) {
         return this.call('/api/settings', 'POST', settings);
     }
+
+    // AI Query endpoints
+    static async submitAIQuery(query) {
+        return this.call('/api/ai/query', 'POST', { query: query });
+    }
 }

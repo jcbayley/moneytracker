@@ -3,3 +3,8 @@ pywebview>=4.0.0
 PyQt5>=5.15.0
 PyQtWebEngine>=5.15.0
 pyinstaller>=5.0.0
+
+# Optional AI dependencies for enhanced query functionality
+# Install with: pip install -r requirements-ai.txt
+# transformers>=4.21.0,<5.0.0
+# torch>=1.12.0,<2.1.0

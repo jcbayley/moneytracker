@@ -158,7 +158,7 @@ const UI = {
      * Set active tab
      */
     setActiveTab(activeTabId) {
-        const tabs = ['transactions', 'recurring', 'projects', 'analytics', 'settings'];
+        const tabs = ['transactions', 'recurring', 'projects', 'analytics', 'ai-query', 'settings'];
         
         tabs.forEach(tab => {
             const tabElement = document.getElementById(`${tab}-tab`);
