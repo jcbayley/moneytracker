@@ -270,14 +270,129 @@ const AIQueryComponent = {
             });
         }
         
+        // Setup model type switching
+        const localRadio = document.getElementById('model-type-local');
+        const apiRadio = document.getElementById('model-type-api');
+        
+        if (localRadio && apiRadio) {
+            localRadio.addEventListener('change', () => this.switchModelType('local'));
+            apiRadio.addEventListener('change', () => this.switchModelType('api'));
+        }
+        
         // Check model status on load
         this.checkModelStatus();
+    },
+
+    switchModelType(type) {
+        const localSection = document.getElementById('local-model-section');
+        const apiSection = document.getElementById('api-model-section');
+        
+        if (type === 'local') {
+            localSection.classList.remove('hidden');
+            apiSection.classList.add('hidden');
+        } else {
+            localSection.classList.add('hidden');
+            apiSection.classList.remove('hidden');
+            this.loadApiConfig();
+        }
+    },
+
+    async testApiConnection() {
+        const url = document.getElementById('api-url').value.trim();
+        const model = document.getElementById('api-model').value.trim();
+        const apiKey = document.getElementById('api-key').value.trim();
+        const statusDiv = document.getElementById('api-status');
+        
+        if (!url || !model) {
+            statusDiv.innerHTML = '<span style="color: #dc3545;">Please enter API URL and model name</span>';
+            return;
+        }
+        
+        statusDiv.innerHTML = '<span style="color: #6c757d;">Testing connection...</span>';
+        
+        try {
+            const response = await fetch('/api/ai/test-connection', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ url, model, api_key: apiKey })
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                statusDiv.innerHTML = '<span style="color: #28a745;">✓ Connection successful!</span>';
+            } else {
+                statusDiv.innerHTML = `<span style="color: #dc3545;">✗ Connection failed: ${result.error}</span>`;
+            }
+        } catch (error) {
+            statusDiv.innerHTML = `<span style="color: #dc3545;">✗ Connection failed: ${error.message}</span>`;
+        }
+    },
+
+    async saveApiConfig() {
+        const url = document.getElementById('api-url').value.trim();
+        const model = document.getElementById('api-model').value.trim();
+        const apiKey = document.getElementById('api-key').value.trim();
+        const statusDiv = document.getElementById('api-status');
+        
+        if (!url || !model) {
+            statusDiv.innerHTML = '<span style="color: #dc3545;">Please enter API URL and model name</span>';
+            return;
+        }
+        
+        try {
+            const response = await fetch('/api/ai/save-config', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    type: 'api',
+                    url: url,
+                    model: model,
+                    api_key: apiKey 
+                })
+            });
+            
+            if (response.ok) {
+                statusDiv.innerHTML = '<span style="color: #28a745;">✓ Configuration saved successfully!</span>';
+                // Update query button status
+                const queryBtn = document.getElementById('ai-query-btn');
+                if (queryBtn) {
+                    queryBtn.disabled = false;
+                    queryBtn.title = '';
+                }
+            } else {
+                statusDiv.innerHTML = '<span style="color: #dc3545;">✗ Failed to save configuration</span>';
+            }
+        } catch (error) {
+            statusDiv.innerHTML = `<span style="color: #dc3545;">✗ Error: ${error.message}</span>`;
+        }
+    },
+
+    loadApiConfig() {
+        // Load saved API configuration
+        fetch('/api/ai/get-config')
+            .then(response => response.json())
+            .then(config => {
+                if (config.type === 'api') {
+                    document.getElementById('api-url').value = config.url || '';
+                    document.getElementById('api-model').value = config.model || '';
+                    document.getElementById('api-key').value = config.api_key || '';
+                    
+                    const statusDiv = document.getElementById('api-status');
+                    statusDiv.innerHTML = '<span style="color: #28a745;">✓ Configuration loaded</span>';
+                }
+            })
+            .catch(() => {
+                // No existing config, that's fine
+            });
     }
 };
 
 // Model management functions
 window.downloadModel = () => AIQueryComponent.downloadModel();
 window.checkModelStatus = () => AIQueryComponent.checkModelStatus();
+window.testApiConnection = () => AIQueryComponent.testApiConnection();
+window.saveApiConfig = () => AIQueryComponent.saveApiConfig();
 
 // Global functions for HTML handlers
 window.submitAIQuery = () => AIQueryComponent.submitQuery();

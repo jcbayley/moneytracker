@@ -78,3 +78,100 @@ def get_download_progress():
     return jsonify(download_progress)
 
 
+@ai_query_bp.route('/api/ai/test-connection', methods=['POST'])
+def test_api_connection():
+    """Test connection to external API."""
+    try:
+        data = request.get_json()
+        url = data.get('url', '').strip()
+        model = data.get('model', '').strip()
+        api_key = data.get('api_key', '').strip()
+        
+        if not url or not model:
+            return jsonify({'success': False, 'error': 'URL and model name are required'}), 400
+        
+        # Test connection based on API type
+        import requests
+        
+        if 'ollama' in url.lower() or ':11434' in url:
+            # Ollama API test
+            test_url = f"{url.rstrip('/')}/api/generate"
+            payload = {
+                "model": model,
+                "prompt": "test",
+                "stream": False
+            }
+            response = requests.post(test_url, json=payload, timeout=10)
+            
+        elif 'openai' in url.lower():
+            # OpenAI-compatible API test
+            test_url = f"{url.rstrip('/')}/chat/completions"
+            headers = {"Content-Type": "application/json"}
+            if api_key:
+                headers["Authorization"] = f"Bearer {api_key}"
+                
+            payload = {
+                "model": model,
+                "messages": [{"role": "user", "content": "test"}],
+                "max_tokens": 1
+            }
+            response = requests.post(test_url, json=payload, headers=headers, timeout=10)
+            
+        else:
+            # Generic API test - try Ollama format first
+            test_url = f"{url.rstrip('/')}/api/generate"
+            payload = {
+                "model": model,
+                "prompt": "test",
+                "stream": False
+            }
+            response = requests.post(test_url, json=payload, timeout=10)
+        
+        if response.status_code == 200:
+            return jsonify({'success': True})
+        else:
+            return jsonify({'success': False, 'error': f'HTTP {response.status_code}: {response.text[:200]}'})
+            
+    except requests.exceptions.Timeout:
+        return jsonify({'success': False, 'error': 'Connection timeout - check if the service is running'})
+    except requests.exceptions.ConnectionError:
+        return jsonify({'success': False, 'error': 'Connection refused - check URL and port'})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+
+@ai_query_bp.route('/api/ai/save-config', methods=['POST'])
+def save_ai_config():
+    """Save AI configuration."""
+    try:
+        data = request.get_json()
+        # In a real app, save this to database or config file
+        # For now, we'll store it in a simple way
+        import json
+        config_path = os.path.expanduser("~/.local/share/MoneyTracker/ai_config.json")
+        
+        with open(config_path, 'w') as f:
+            json.dump(data, f)
+        
+        return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@ai_query_bp.route('/api/ai/get-config', methods=['GET'])
+def get_ai_config():
+    """Get AI configuration."""
+    try:
+        import json
+        config_path = os.path.expanduser("~/.local/share/MoneyTracker/ai_config.json")
+        
+        if os.path.exists(config_path):
+            with open(config_path, 'r') as f:
+                config = json.load(f)
+            return jsonify(config)
+        else:
+            return jsonify({'type': 'local'})  # Default to local
+    except Exception as e:
+        return jsonify({'type': 'local'}), 200  # Default fallback
+
+

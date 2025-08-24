@@ -347,26 +347,70 @@
                     <h3>🤖 AI Transaction Query</h3>
                     <p style="color: #6c757d; margin-bottom: 20px;">Ask questions about your transactions in natural language. The AI will search and summarize your financial data.</p>
                     
-                    <!-- Model Status Section -->
-                    <div id="model-status-section" style="background: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <!-- AI Model Configuration Section -->
+                    <div id="model-config-section" style="background: #f8f9fa; border: 1px solid #dee2e6; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                        <h5>AI Model Configuration</h5>
+                        
+                        <!-- Model Type Selection -->
+                        <div style="margin-bottom: 15px;">
+                            <label style="display: block; margin-bottom: 5px;"><strong>Choose AI Model Type:</strong></label>
                             <div>
-                                <strong>AI Model Status:</strong> 
-                                <span id="model-status">Not Downloaded</span>
-                                <div id="model-info" style="font-size: 12px; color: #6c757d; margin-top: 5px;">
-                                    Default model: Qwen2.5-0.5B-Instruct (500MB) - Optimized for financial queries
-                                </div>
-                            </div>
-                            <div>
-                                <button class="btn btn-primary" onclick="downloadModel()" id="download-model-btn">Download Model</button>
-                                <button class="btn btn-secondary" onclick="checkModelStatus()" id="check-status-btn" style="margin-left: 10px;">Check Status</button>
+                                <label style="margin-right: 20px;">
+                                    <input type="radio" name="model-type" value="local" id="model-type-local" checked> 
+                                    Local Model (Download Required)
+                                </label>
+                                <label>
+                                    <input type="radio" name="model-type" value="api" id="model-type-api"> 
+                                    External API (Ollama/OpenAI)
+                                </label>
                             </div>
                         </div>
-                        <div id="download-progress" class="hidden" style="margin-top: 15px;">
-                            <div style="background: #e9ecef; border-radius: 4px; overflow: hidden;">
-                                <div id="progress-bar" style="background: #007bff; height: 20px; width: 0%; transition: width 0.3s;"></div>
+
+                        <!-- Local Model Section -->
+                        <div id="local-model-section">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                                <div>
+                                    <strong>Local Model Status:</strong> 
+                                    <span id="model-status">Not Downloaded</span>
+                                    <div id="model-info" style="font-size: 12px; color: #6c757d; margin-top: 5px;">
+                                        Current: Qwen2.5-3B - High-quality model for financial analysis
+                                    </div>
+                                </div>
+                                <div>
+                                    <button class="btn btn-primary" onclick="downloadModel()" id="download-model-btn">Download Model</button>
+                                    <button class="btn btn-secondary" onclick="checkModelStatus()" id="check-status-btn" style="margin-left: 10px;">Check Status</button>
+                                </div>
                             </div>
-                            <div id="progress-text" style="text-align: center; margin-top: 5px; font-size: 12px;"></div>
+                            <div id="download-progress" class="hidden" style="margin-top: 15px;">
+                                <div style="background: #e9ecef; border-radius: 4px; overflow: hidden;">
+                                    <div id="progress-bar" style="background: #007bff; height: 20px; width: 0%; transition: width 0.3s;"></div>
+                                </div>
+                                <div id="progress-text" style="text-align: center; margin-top: 5px; font-size: 12px;"></div>
+                            </div>
+                        </div>
+
+                        <!-- API Model Section -->
+                        <div id="api-model-section" class="hidden">
+                            <div style="margin-bottom: 10px;">
+                                <label for="api-url" style="display: block; margin-bottom: 5px;"><strong>API URL:</strong></label>
+                                <input type="text" id="api-url" placeholder="http://localhost:11434 (Ollama) or https://api.openai.com/v1" 
+                                       style="width: 100%; padding: 8px; margin-bottom: 10px;">
+                            </div>
+                            <div style="margin-bottom: 10px;">
+                                <label for="api-model" style="display: block; margin-bottom: 5px;"><strong>Model Name:</strong></label>
+                                <input type="text" id="api-model" placeholder="llama3.1:8b (Ollama) or gpt-3.5-turbo (OpenAI)" 
+                                       style="width: 100%; padding: 8px; margin-bottom: 10px;">
+                            </div>
+                            <div style="margin-bottom: 10px;">
+                                <label for="api-key" style="display: block; margin-bottom: 5px;"><strong>API Key (if required):</strong></label>
+                                <input type="password" id="api-key" placeholder="Leave empty for Ollama, required for OpenAI" 
+                                       style="width: 100%; padding: 8px; margin-bottom: 10px;">
+                            </div>
+                            <div>
+                                <button class="btn btn-primary" onclick="testApiConnection()" id="test-api-btn">Test Connection</button>
+                                <button class="btn btn-success" onclick="saveApiConfig()" id="save-api-btn" style="margin-left: 10px;">Save Configuration</button>
+                            </div>
+                            <div id="api-status" style="margin-top: 10px; font-size: 12px;"></div>
                         </div>
                     </div>
                     

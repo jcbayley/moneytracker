@@ -11,14 +11,17 @@ class AIQueryService:
     """Service for processing AI queries about transactions."""
     
     def __init__(self):
-        self.model_name = "Qwen/Qwen2.5-0.5B-Instruct"
+        #self.model_name = "Qwen/Qwen2.5-0.5B-Instruct"
+        self.model_name = "Qwen/Qwen2.5-3B"
         self.model_dir = os.path.expanduser("~/.local/share/MoneyTracker/models")
-        self.model_path = os.path.join(self.model_dir, "qwen2.5-0.5b-instruct")
+        self.model_path = os.path.join(self.model_dir, "Qwen2.5-3B")
         self.model = None
         self.sampling_params = None
         self._db_context_cache = None  # Cache for database context
+        self._config = None  # AI configuration
         
         os.makedirs(self.model_dir, exist_ok=True)
+        self._load_config()
         self._load_model()
     
     def _load_model(self):
@@ -64,8 +67,28 @@ class AIQueryService:
             print(f"Transformers loading failed: {e}")
             self.model = None
     
+    def _load_config(self):
+        """Load AI configuration."""
+        try:
+            config_path = os.path.expanduser("~/.local/share/MoneyTracker/ai_config.json")
+            if os.path.exists(config_path):
+                with open(config_path, 'r') as f:
+                    self._config = json.load(f)
+            else:
+                self._config = {'type': 'local'}
+        except Exception as e:
+            print(f"Failed to load AI config: {e}")
+            self._config = {'type': 'local'}
+
     def _call_llm(self, prompt):
-        """Call the AI model."""
+        """Call the AI model (local or API)."""
+        if self._config.get('type') == 'api':
+            return self._call_api(prompt)
+        else:
+            return self._call_local_model(prompt)
+
+    def _call_local_model(self, prompt):
+        """Call the local AI model."""
         if self.model is None:
             raise Exception("AI model not loaded. Please download the model first.")
         
@@ -86,6 +109,64 @@ class AIQueryService:
         except Exception as e:
             print(f"Model generation failed: {e}")
             raise Exception(f"AI model call failed: {e}")
+
+    def _call_api(self, prompt):
+        """Call external API."""
+        import requests
+        
+        url = self._config.get('url', '').strip()
+        model = self._config.get('model', '').strip()
+        api_key = self._config.get('api_key', '').strip()
+        
+        if not url or not model:
+            raise Exception("API configuration incomplete. Please configure API settings.")
+        
+        try:
+            if 'ollama' in url.lower() or ':11434' in url:
+                # Ollama API
+                api_url = f"{url.rstrip('/')}/api/generate"
+                payload = {
+                    "model": model,
+                    "prompt": prompt,
+                    "stream": False,
+                    "options": {
+                        "temperature": 0.7,
+                        "top_p": 0.9
+                    }
+                }
+                response = requests.post(api_url, json=payload, timeout=30)
+                if response.status_code == 200:
+                    return response.json().get('response', '')
+                else:
+                    raise Exception(f"API error: {response.status_code}")
+                    
+            elif 'openai' in url.lower():
+                # OpenAI-compatible API
+                api_url = f"{url.rstrip('/')}/chat/completions"
+                headers = {"Content-Type": "application/json"}
+                if api_key:
+                    headers["Authorization"] = f"Bearer {api_key}"
+                    
+                payload = {
+                    "model": model,
+                    "messages": [{"role": "user", "content": prompt}],
+                    "temperature": 0.7,
+                    "max_tokens": 512
+                }
+                response = requests.post(api_url, json=payload, headers=headers, timeout=30)
+                if response.status_code == 200:
+                    return response.json()['choices'][0]['message']['content']
+                else:
+                    raise Exception(f"API error: {response.status_code}")
+            else:
+                raise Exception("Unsupported API type")
+                
+        except requests.exceptions.Timeout:
+            raise Exception("API request timeout")
+        except requests.exceptions.ConnectionError:
+            raise Exception("Cannot connect to API")
+        except Exception as e:
+            raise Exception(f"API call failed: {e}")
     
     def process_query(self, user_query):
         """Process user query and return results."""
