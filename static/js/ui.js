@@ -1,11 +1,11 @@
 /**
  * UI management utilities
  */
-class UI {
+const UI = {
     /**
      * Populate a select element with options
      */
-    static populateSelect(selectId, options, valueKey = 'value', textKey = 'text', defaultOption = null) {
+    populateSelect(selectId, options, valueKey = 'value', textKey = 'text', defaultOption = null) {
         const select = document.getElementById(selectId);
         if (!select) return;
 
@@ -35,29 +35,29 @@ class UI {
         if (currentValue) {
             select.value = currentValue;
         }
-    }
+    },
 
     /**
      * Show/hide modal
      */
-    static showModal(modalId) {
+    showModal(modalId) {
         const modal = document.getElementById(modalId);
         if (modal) {
             modal.style.display = 'block';
         }
-    }
+    },
 
-    static hideModal(modalId) {
+    hideModal(modalId) {
         const modal = document.getElementById(modalId);
         if (modal) {
             modal.style.display = 'none';
         }
-    }
+    },
 
     /**
      * Clear form fields
      */
-    static clearForm(formId) {
+    clearForm(formId) {
         const form = document.getElementById(formId) || document;
         const inputs = form.querySelectorAll('input, select, textarea');
         
@@ -78,29 +78,29 @@ class UI {
                 input.value = input.defaultValue || '';
             }
         });
-    }
+    },
 
     /**
      * Format currency
      */
-    static formatCurrency(amount, currency = '£') {
+    formatCurrency(amount, currency = '£') {
         return `${currency}${Math.abs(amount).toFixed(2)}`;
-    }
+    },
 
     /**
      * Create amount element with positive/negative styling
      */
-    static createAmountElement(amount, currency = '£') {
+    createAmountElement(amount, currency = '£') {
         const span = document.createElement('span');
         span.className = `amount ${amount >= 0 ? 'positive' : 'negative'}`;
         span.textContent = this.formatCurrency(amount, currency);
         return span;
-    }
+    },
 
     /**
      * Debounce function calls
      */
-    static debounce(func, wait) {
+    debounce(func, wait) {
         let timeout;
         return function executedFunction(...args) {
             const later = () => {
@@ -110,12 +110,12 @@ class UI {
             clearTimeout(timeout);
             timeout = setTimeout(later, wait);
         };
-    }
+    },
 
     /**
      * Show notification/alert
      */
-    static showNotification(message, type = 'info') {
+    showNotification(message, type = 'info') {
         // For now, use alert - can be enhanced with a proper notification system
         if (type === 'error') {
             alert('Error: ' + message);
@@ -124,26 +124,26 @@ class UI {
         } else {
             alert(message);
         }
-    }
+    },
 
     /**
      * Confirm action
      */
-    static async confirmAction(message) {
+    async confirmAction(message) {
         return confirm(message);
-    }
+    },
 
     /**
      * Get user input
      */
-    static async getUserInput(message, defaultValue = '') {
+    async getUserInput(message, defaultValue = '') {
         return prompt(message, defaultValue);
-    }
+    },
 
     /**
      * Toggle element visibility
      */
-    static toggleVisibility(elementId, visible = null) {
+    toggleVisibility(elementId, visible = null) {
         const element = document.getElementById(elementId);
         if (!element) return;
 
@@ -152,12 +152,12 @@ class UI {
         } else {
             element.style.display = visible ? '' : 'none';
         }
-    }
+    },
 
     /**
      * Set active tab
      */
-    static setActiveTab(activeTabId) {
+    setActiveTab(activeTabId) {
         const tabs = ['transactions', 'recurring', 'projects', 'analytics', 'settings'];
         
         tabs.forEach(tab => {
@@ -170,12 +170,12 @@ class UI {
         // Update tab buttons
         document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
         event.target.classList.add('active');
-    }
+    },
 
     /**
      * Create table row
      */
-    static createTableRow(data, columns) {
+    createTableRow(data, columns) {
         const tr = document.createElement('tr');
         
         columns.forEach(column => {
@@ -198,4 +198,4 @@ class UI {
 
         return tr;
     }
-}
+};

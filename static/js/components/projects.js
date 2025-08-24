@@ -6,11 +6,11 @@
 let projects = [];
 let currentProjectAnalytics = null;
 
-class ProjectsComponent {
+const ProjectsComponent = {
     /**
      * Load and display all projects
      */
-    static async loadProjects() {
+    async loadProjects() {
         try {
             projects = await API.getProjects();
             this.renderProjectsList();
@@ -18,12 +18,12 @@ class ProjectsComponent {
             console.error('Error loading projects:', error);
             UI.showNotification('Error loading projects', 'error');
         }
-    }
+    },
     
     /**
      * Render the projects list
      */
-    static renderProjectsList() {
+    renderProjectsList() {
         const list = document.getElementById('projects-list');
         if (!list) return;
         
@@ -63,12 +63,12 @@ class ProjectsComponent {
             `;
             list.appendChild(div);
         });
-    }
+    },
     
     /**
      * Show project analytics
      */
-    static async showProjectAnalytics(projectId) {
+    async showProjectAnalytics(projectId) {
         try {
             currentProjectAnalytics = await API.getProjectAnalytics(projectId);
             
@@ -98,21 +98,21 @@ class ProjectsComponent {
             console.error('Error loading project analytics:', error);
             UI.showNotification('Error loading project analytics', 'error');
         }
-    }
+    },
     
     /**
      * Hide project analytics and return to projects list
      */
-    static hideProjectAnalytics() {
+    hideProjectAnalytics() {
         document.getElementById('projects-list').parentElement.style.display = 'block';
         document.getElementById('project-analytics').style.display = 'none';
         currentProjectAnalytics = null;
-    }
+    },
     
     /**
      * Render category pie chart
      */
-    static renderCategoryChart() {
+    renderCategoryChart() {
         const canvas = document.getElementById('project-category-chart');
         const ctx = canvas.getContext('2d');
         
@@ -182,12 +182,12 @@ class ProjectsComponent {
             ctx.fillText(`${category.category || 'No category'}: £${category.total.toFixed(2)}`, 
                          legendX + 20, legendYPos + 12);
         });
-    }
+    },
     
     /**
      * Render recent transactions for project
      */
-    static renderRecentTransactions() {
+    renderRecentTransactions() {
         const container = document.getElementById('project-transactions');
         
         if (!currentProjectAnalytics.recent_transactions.length) {
@@ -213,12 +213,12 @@ class ProjectsComponent {
         
         html += '</tbody></table>';
         container.innerHTML = html;
-    }
+    },
     
     /**
      * Create or update project
      */
-    static async saveProject() {
+    async saveProject() {
         const name = document.getElementById('modal-project-name').value.trim();
         const description = document.getElementById('modal-project-description').value.trim();
         
@@ -245,12 +245,12 @@ class ProjectsComponent {
             console.error('Error saving project:', error);
             UI.showNotification('Error saving project', 'error');
         }
-    }
+    },
     
     /**
      * Delete project
      */
-    static async deleteProject(projectId) {
+    async deleteProject(projectId) {
         const confirmed = await UI.confirmAction('Are you sure you want to delete this project?');
         if (!confirmed) return;
         
@@ -263,23 +263,23 @@ class ProjectsComponent {
             console.error('Error deleting project:', error);
             UI.showNotification('Error deleting project', 'error');
         }
-    }
+    },
     
     /**
      * Show create project modal
      */
-    static showCreateProjectModal() {
+    showCreateProjectModal() {
         appState.clearEditingProject();
         document.getElementById('project-modal-title').textContent = 'Add Project';
         document.getElementById('modal-project-name').value = '';
         document.getElementById('modal-project-description').value = '';
         UI.showModal('projectModal');
-    }
+    },
     
     /**
      * Show edit project modal
      */
-    static editProject(projectId) {
+    editProject(projectId) {
         const project = projects.find(p => p.id === projectId);
         if (!project) return;
         
@@ -288,20 +288,20 @@ class ProjectsComponent {
         document.getElementById('modal-project-name').value = project.name;
         document.getElementById('modal-project-description').value = project.description || '';
         UI.showModal('projectModal');
-    }
+    },
     
     /**
      * Close project modal
      */
-    static closeProjectModal() {
+    closeProjectModal() {
         UI.hideModal('projectModal');
         appState.clearEditingProject();
-    }
+    },
     
     /**
      * Load project dropdown for transaction form
      */
-    static async loadProjectDropdown() {
+    async loadProjectDropdown() {
         try {
             const projectNames = await API.getProjectNames();
             const dropdown = document.getElementById('project-dropdown');
@@ -345,12 +345,12 @@ class ProjectsComponent {
         } catch (error) {
             console.error('Error loading project dropdown:', error);
         }
-    }
+    },
     
     /**
      * Filter projects in dropdown
      */
-    static filterProjects() {
+    filterProjects() {
         const searchTerm = document.getElementById('project').value.toLowerCase();
         const dropdown = document.getElementById('project-dropdown');
         const items = dropdown.querySelectorAll('.dropdown-item');
@@ -363,24 +363,24 @@ class ProjectsComponent {
                 item.style.display = isMatch ? 'block' : 'none';
             }
         });
-    }
+    },
     
     /**
      * Show project dropdown
      */
-    static showProjectDropdown() {
+    showProjectDropdown() {
         document.getElementById('project-dropdown').style.display = 'block';
-    }
+    },
     
     /**
      * Hide project dropdown
      */
-    static hideProjectDropdown() {
+    hideProjectDropdown() {
         setTimeout(() => {
             document.getElementById('project-dropdown').style.display = 'none';
         }, 200);
     }
-}
+};
 
 // Global functions for HTML onclick handlers
 window.showProjectAnalytics = (projectId) => ProjectsComponent.showProjectAnalytics(projectId);

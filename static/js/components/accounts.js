@@ -1,8 +1,8 @@
 /**
  * Account management component
  */
-class AccountsComponent {
-    static async loadAccounts() {
+const AccountsComponent = {
+    async loadAccounts() {
         try {
             const accounts = await API.getAccounts();
             this.renderAccountsList(accounts);
@@ -11,9 +11,9 @@ class AccountsComponent {
             console.error('Error loading accounts:', error);
             UI.showNotification('Error loading accounts', 'error');
         }
-    }
+    },
 
-    static renderAccountsList(accounts) {
+    renderAccountsList(accounts) {
         const accountsList = document.getElementById('accounts-list');
         if (!accountsList) return;
 
@@ -63,9 +63,9 @@ class AccountsComponent {
                 accountsList.appendChild(div);
             });
         });
-    }
+    },
 
-    static populateAccountSelects(accounts) {
+    populateAccountSelects(accounts) {
         const selects = [
             { id: 'account-select', defaultOption: { value: '', text: 'All Accounts' } },
             { id: 'transaction-account-filter', defaultOption: { value: '', text: 'All Accounts' } },
@@ -83,19 +83,19 @@ class AccountsComponent {
                 selectConfig.defaultOption
             );
         });
-    }
+    },
 
-    static selectAccount(accountId) {
+    selectAccount(accountId) {
         appState.setCurrentAccount(accountId);
         this.loadAccounts(); // Refresh to show active state
         TransactionsComponent.loadTransactions();
-    }
+    },
 
-    static async showAddAccountModal() {
+    async showAddAccountModal() {
         UI.showModal('accountModal');
-    }
+    },
 
-    static async addAccount() {
+    async addAccount() {
         try {
             const data = {
                 name: document.getElementById('new-account-name').value,
@@ -116,16 +116,16 @@ class AccountsComponent {
             console.error('Error creating account:', error);
             UI.showNotification('Error creating account', 'error');
         }
-    }
+    },
 
-    static editAccount(id, name, type) {
+    editAccount(id, name, type) {
         appState.setEditingAccount(id);
         document.getElementById('edit-account-name').value = name;
         document.getElementById('edit-account-type').value = type;
         UI.showModal('editAccountModal');
-    }
+    },
 
-    static async updateAccount() {
+    async updateAccount() {
         try {
             const editingId = appState.getEditingAccount();
             if (!editingId) return;
@@ -148,18 +148,18 @@ class AccountsComponent {
             console.error('Error updating account:', error);
             UI.showNotification('Error updating account', 'error');
         }
-    }
+    },
 
-    static closeModal() {
+    closeModal() {
         UI.hideModal('accountModal');
         UI.clearForm('accountModal');
-    }
+    },
 
-    static closeEditModal() {
+    closeEditModal() {
         UI.hideModal('editAccountModal');
         appState.clearEditingAccount();
     }
-}
+};
 
 // Global functions for HTML onclick handlers
 window.showAddAccountModal = () => AccountsComponent.showAddAccountModal();

@@ -1,17 +1,17 @@
 /**
  * Payees and Categories component
  */
-class PayeesAndCategoriesComponent {
-    static async loadPayees() {
+const PayeesAndCategoriesComponent = {
+    async loadPayees() {
         try {
             const payees = await API.getPayees();
             appState.setPayees(payees);
         } catch (error) {
             console.error('Error loading payees:', error);
         }
-    }
+    },
 
-    static async loadCategories() {
+    async loadCategories() {
         try {
             const categories = await API.getCategories();
             appState.setCategories(categories);
@@ -19,9 +19,9 @@ class PayeesAndCategoriesComponent {
         } catch (error) {
             console.error('Error loading categories:', error);
         }
-    }
+    },
 
-    static populateCategorySelects(categories) {
+    populateCategorySelects(categories) {
         // Only populate the filter dropdown, as the input fields are handled by search dropdowns
         const filterSelect = document.getElementById('transaction-category-filter');
         if (filterSelect) {
@@ -39,48 +39,48 @@ class PayeesAndCategoriesComponent {
                 filterSelect.value = currentValue;
             }
         }
-    }
+    },
 
     // Payee dropdown functionality
-    static showPayeeDropdown() {
+    showPayeeDropdown() {
         appState.clearDropdownTimeout();
         this.populatePayeeDropdown('');
         document.getElementById('payee-dropdown').style.display = 'block';
-    }
+    },
 
-    static hidePayeeDropdown() {
+    hidePayeeDropdown() {
         const timeout = setTimeout(() => {
             document.getElementById('payee-dropdown').style.display = 'none';
         }, 200);
         appState.setDropdownTimeout(timeout);
-    }
+    },
 
-    static showEditPayeeDropdown() {
+    showEditPayeeDropdown() {
         appState.clearDropdownTimeout();
         this.populateEditPayeeDropdown('');
         document.getElementById('edit-payee-dropdown').style.display = 'block';
-    }
+    },
 
-    static hideEditPayeeDropdown() {
+    hideEditPayeeDropdown() {
         const timeout = setTimeout(() => {
             document.getElementById('edit-payee-dropdown').style.display = 'none';
         }, 200);
         appState.setDropdownTimeout(timeout);
-    }
+    },
 
-    static filterPayees() {
+    filterPayees() {
         const input = document.getElementById('payee');
         const filter = input.value.toLowerCase();
         this.populatePayeeDropdown(filter);
-    }
+    },
 
-    static filterEditPayees() {
+    filterEditPayees() {
         const input = document.getElementById('edit-transaction-payee');
         const filter = input.value.toLowerCase();
         this.populateEditPayeeDropdown(filter);
-    }
+    },
 
-    static populatePayeeDropdown(filter) {
+    populatePayeeDropdown(filter) {
         const dropdown = document.getElementById('payee-dropdown');
         dropdown.innerHTML = '';
 
@@ -119,9 +119,9 @@ class PayeesAndCategoriesComponent {
         addNew.textContent = '+ Add New Payee';
         addNew.onclick = () => this.addNewPayee();
         dropdown.appendChild(addNew);
-    }
+    },
 
-    static populateEditPayeeDropdown(filter) {
+    populateEditPayeeDropdown(filter) {
         const dropdown = document.getElementById('edit-payee-dropdown');
         dropdown.innerHTML = '';
 
@@ -160,9 +160,9 @@ class PayeesAndCategoriesComponent {
         addNew.textContent = '+ Add New Payee';
         addNew.onclick = () => this.addNewEditPayee();
         dropdown.appendChild(addNew);
-    }
+    },
 
-    static selectPayee(name, isAccount, accountId = null) {
+    selectPayee(name, isAccount, accountId = null) {
         const payeeInput = document.getElementById('payee');
         const typeSelect = document.getElementById('type');
         const transferAccount = document.getElementById('transfer-account');
@@ -179,9 +179,9 @@ class PayeesAndCategoriesComponent {
         }
 
         document.getElementById('payee-dropdown').style.display = 'none';
-    }
+    },
 
-    static selectEditPayee(name, isAccount, accountId = null) {
+    selectEditPayee(name, isAccount, accountId = null) {
         const payeeInput = document.getElementById('edit-transaction-payee');
         const typeSelect = document.getElementById('edit-transaction-type');
         const transferAccount = document.getElementById('edit-transfer-account');
@@ -198,9 +198,9 @@ class PayeesAndCategoriesComponent {
         }
 
         document.getElementById('edit-payee-dropdown').style.display = 'none';
-    }
+    },
 
-    static async addNewPayee() {
+    async addNewPayee() {
         const newPayee = await UI.getUserInput('Enter new payee name:');
         if (newPayee) {
             try {
@@ -215,9 +215,9 @@ class PayeesAndCategoriesComponent {
         } else {
             document.getElementById('payee-dropdown').style.display = 'none';
         }
-    }
+    },
 
-    static async addNewEditPayee() {
+    async addNewEditPayee() {
         const newPayee = await UI.getUserInput('Enter new payee name:');
         if (newPayee) {
             try {
@@ -232,48 +232,48 @@ class PayeesAndCategoriesComponent {
         } else {
             document.getElementById('edit-payee-dropdown').style.display = 'none';
         }
-    }
+    },
 
     // Category dropdown functionality
-    static showCategoryDropdown() {
+    showCategoryDropdown() {
         appState.clearDropdownTimeout();
         this.populateCategoryDropdown('');
         document.getElementById('category-dropdown').style.display = 'block';
-    }
+    },
 
-    static hideCategoryDropdown() {
+    hideCategoryDropdown() {
         const timeout = setTimeout(() => {
             document.getElementById('category-dropdown').style.display = 'none';
         }, 200);
         appState.setDropdownTimeout(timeout);
-    }
+    },
 
-    static showEditCategoryDropdown() {
+    showEditCategoryDropdown() {
         appState.clearDropdownTimeout();
         this.populateEditCategoryDropdown('');
         document.getElementById('edit-category-dropdown').style.display = 'block';
-    }
+    },
 
-    static hideEditCategoryDropdown() {
+    hideEditCategoryDropdown() {
         const timeout = setTimeout(() => {
             document.getElementById('edit-category-dropdown').style.display = 'none';
         }, 200);
         appState.setDropdownTimeout(timeout);
-    }
+    },
 
-    static filterCategories() {
+    filterCategories() {
         const input = document.getElementById('category');
         const filter = input.value.toLowerCase();
         this.populateCategoryDropdown(filter);
-    }
+    },
 
-    static filterEditCategories() {
+    filterEditCategories() {
         const input = document.getElementById('edit-transaction-category');
         const filter = input.value.toLowerCase();
         this.populateEditCategoryDropdown(filter);
-    }
+    },
 
-    static populateCategoryDropdown(filter) {
+    populateCategoryDropdown(filter) {
         const dropdown = document.getElementById('category-dropdown');
         dropdown.innerHTML = '';
 
@@ -297,9 +297,9 @@ class PayeesAndCategoriesComponent {
         addNew.textContent = '+ Add New Category';
         addNew.onclick = () => this.addNewCategory();
         dropdown.appendChild(addNew);
-    }
+    },
 
-    static populateEditCategoryDropdown(filter) {
+    populateEditCategoryDropdown(filter) {
         const dropdown = document.getElementById('edit-category-dropdown');
         dropdown.innerHTML = '';
 
@@ -323,19 +323,19 @@ class PayeesAndCategoriesComponent {
         addNew.textContent = '+ Add New Category';
         addNew.onclick = () => this.addNewEditCategory();
         dropdown.appendChild(addNew);
-    }
+    },
 
-    static selectCategory(category) {
+    selectCategory(category) {
         document.getElementById('category').value = category;
         document.getElementById('category-dropdown').style.display = 'none';
-    }
+    },
 
-    static selectEditCategory(category) {
+    selectEditCategory(category) {
         document.getElementById('edit-transaction-category').value = category;
         document.getElementById('edit-category-dropdown').style.display = 'none';
-    }
+    },
 
-    static async addNewCategory() {
+    async addNewCategory() {
         const newCategory = await UI.getUserInput('Enter new category name:');
         if (newCategory) {
             try {
@@ -350,9 +350,9 @@ class PayeesAndCategoriesComponent {
         } else {
             document.getElementById('category-dropdown').style.display = 'none';
         }
-    }
+    },
 
-    static async addNewEditCategory() {
+    async addNewEditCategory() {
         const newCategory = await UI.getUserInput('Enter new category name:');
         if (newCategory) {
             try {
@@ -368,7 +368,7 @@ class PayeesAndCategoriesComponent {
             document.getElementById('edit-category-dropdown').style.display = 'none';
         }
     }
-}
+};
 
 // Global functions for HTML handlers
 window.showPayeeDropdown = () => PayeesAndCategoriesComponent.showPayeeDropdown();

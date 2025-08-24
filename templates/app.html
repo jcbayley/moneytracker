@@ -521,14 +521,27 @@
         </div>
     </div>
 
-    <!-- Load modular JavaScript files -->
+    <!-- Load utility and configuration files first -->
+    <script src="/static/js/config.js"></script>
+    <script src="/static/js/utils.js"></script>
+    <script src="/static/js/errorHandler.js"></script>
+    
+    <!-- Load core application files -->
     <script src="/static/js/api.js"></script>
     <script src="/static/js/state.js"></script>
     <script src="/static/js/ui.js"></script>
+    
+    <!-- Load specialized managers -->
+    <script src="/static/js/chartManager.js"></script>
+    <script src="/static/js/analyticsManager.js"></script>
+    
+    <!-- Load component files -->
     <script src="/static/js/components/accounts.js"></script>
     <script src="/static/js/components/transactions.js"></script>
     <script src="/static/js/components/payees-categories.js"></script>
     <script src="/static/js/components/projects.js"></script>
+    
+    <!-- Load main application file last -->
     <script src="/static/js/app.js"></script>
 </body>
 </html>

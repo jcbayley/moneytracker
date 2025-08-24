@@ -1,11 +1,11 @@
 /**
  * Transaction management component
  */
-class TransactionsComponent {
-    static lastTransactionDate = null;
-    static lastTransactionAccount = null;
+const TransactionsComponent = {
+    lastTransactionDate: null,
+    lastTransactionAccount: null,
     
-    static async loadTransactions() {
+    async loadTransactions() {
         try {
             // Build query parameters
             const filters = {};
@@ -47,9 +47,9 @@ class TransactionsComponent {
             console.error('Error loading transactions:', error);
             UI.showNotification('Error loading transactions', 'error');
         }
-    }
+    },
 
-    static renderTransactionsList(transactions) {
+    renderTransactionsList(transactions) {
         const tbody = document.getElementById('transactions-list');
         if (!tbody) return;
 
@@ -78,9 +78,9 @@ class TransactionsComponent {
             `;
             tbody.appendChild(tr);
         });
-    }
+    },
 
-    static async addTransaction() {
+    async addTransaction() {
         try {
             // Get category value from input
             let category = document.getElementById('category').value;
@@ -167,9 +167,9 @@ class TransactionsComponent {
             const errorMessage = error.message || 'Unknown error occurred';
             UI.showNotification(`Error adding transaction: ${errorMessage}`, 'error');
         }
-    }
+    },
 
-    static async editTransaction(id) {
+    async editTransaction(id) {
         try {
             // Get ALL transactions, not filtered ones
             const transactions = await API.getTransactions({limit: 10000});
@@ -211,9 +211,9 @@ class TransactionsComponent {
             console.error('Error loading transaction for editing:', error);
             UI.showNotification('Error loading transaction', 'error');
         }
-    }
+    },
 
-    static async updateTransaction() {
+    async updateTransaction() {
         try {
             const editingId = appState.getEditingTransaction();
             if (!editingId) return;
@@ -263,9 +263,9 @@ class TransactionsComponent {
             const errorMessage = error.message || 'Unknown error occurred';
             UI.showNotification(`Error updating transaction: ${errorMessage}`, 'error');
         }
-    }
+    },
 
-    static async deleteTransaction(id) {
+    async deleteTransaction(id) {
         try {
             const confirmed = await UI.confirmAction('Are you sure you want to delete this transaction?');
             if (!confirmed) return;
@@ -279,27 +279,27 @@ class TransactionsComponent {
             console.error('Error deleting transaction:', error);
             UI.showNotification('Error deleting transaction', 'error');
         }
-    }
+    },
 
-    static toggleTransferFields() {
+    toggleTransferFields() {
         const type = document.getElementById('type').value;
         UI.toggleVisibility('transfer-row', type === 'transfer');
-    }
+    },
 
-    static toggleEditTransferFields() {
+    toggleEditTransferFields() {
         const type = document.getElementById('edit-transaction-type').value;
         UI.toggleVisibility('edit-transfer-row', type === 'transfer');
-    }
+    },
 
-    static toggleRecurring() {
+    toggleRecurring() {
         const checkbox = document.getElementById('is-recurring');
         const section = document.getElementById('recurring-section');
         if (section) {
             section.classList.toggle('active', checkbox.checked);
         }
-    }
+    },
 
-    static clearForm() {
+    clearForm() {
         UI.clearForm();
         
         // Use last transaction date if available, otherwise use today
@@ -325,35 +325,35 @@ class TransactionsComponent {
         if (recurringSection) {
             recurringSection.classList.remove('active');
         }
-    }
+    },
 
-    static closeEditTransactionModal() {
+    closeEditTransactionModal() {
         UI.hideModal('editTransactionModal');
         appState.clearEditingTransaction();
-    }
+    },
 
     // Filter dropdown functions
-    static toggleDateFilter() {
+    toggleDateFilter() {
         this.hideAllFilterDropdowns();
         UI.toggleVisibility('date-filter-dropdown', true);
-    }
+    },
 
-    static toggleAccountFilter() {
+    toggleAccountFilter() {
         this.hideAllFilterDropdowns();
         UI.toggleVisibility('account-filter-dropdown', true);
-    }
+    },
 
-    static toggleCategoryFilter() {
+    toggleCategoryFilter() {
         this.hideAllFilterDropdowns();
         UI.toggleVisibility('category-filter-dropdown', true);
-    }
+    },
 
-    static toggleTypeFilter() {
+    toggleTypeFilter() {
         this.hideAllFilterDropdowns();
         UI.toggleVisibility('type-filter-dropdown', true);
-    }
+    },
 
-    static hideAllFilterDropdowns() {
+    hideAllFilterDropdowns() {
         const dropdowns = [
             'date-filter-dropdown',
             'account-filter-dropdown', 
@@ -365,7 +365,7 @@ class TransactionsComponent {
             UI.toggleVisibility(id, false);
         });
     }
-}
+};
 
 // Global functions for HTML onclick handlers
 window.addTransaction = () => TransactionsComponent.addTransaction();
