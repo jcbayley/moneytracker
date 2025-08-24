@@ -11,23 +11,23 @@ def get_all():
         ''').fetchall()
 
 
-def create(name, description=None):
+def create(name, description=None, category=None, notes=None):
     """Create a new project."""
     with Database.get_db() as db:
         cursor = db.execute(
-            'INSERT INTO projects (name, description) VALUES (?, ?)',
-            (name, description)
+            'INSERT INTO projects (name, description, category, notes) VALUES (?, ?, ?, ?)',
+            (name, description, category, notes)
         )
         db.commit()
         return cursor.lastrowid
 
 
-def update(project_id, name, description=None):
+def update(project_id, name, description=None, category=None, notes=None):
     """Update a project."""
     with Database.get_db() as db:
         db.execute(
-            'UPDATE projects SET name = ?, description = ? WHERE id = ?',
-            (name, description, project_id)
+            'UPDATE projects SET name = ?, description = ?, category = ?, notes = ? WHERE id = ?',
+            (name, description, category, notes, project_id)
         )
         db.commit()
 
@@ -72,14 +72,13 @@ def get_project_analytics(project_id):
             ORDER BY total DESC
         ''', (project['name'],)).fetchall()
         
-        # Get recent transactions
+        # Get all transactions (remove limit for filtering)
         recent_transactions = db.execute('''
             SELECT t.*, a.name as account_name
             FROM transactions t
             JOIN accounts a ON t.account_id = a.id
             WHERE t.project = ?
             ORDER BY t.date DESC, t.created_at DESC
-            LIMIT 10
         ''', (project['name'],)).fetchall()
         
         return {

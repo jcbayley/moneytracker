@@ -424,6 +424,7 @@ if __name__ == '__main__':
             Database.migrate_add_project_column()
             Database.migrate_add_increment_column()
             Database.migrate_add_projects_table()
+            Database.migrate_add_project_category_notes()
     
     # Start backup system
     start_backup_system(app)

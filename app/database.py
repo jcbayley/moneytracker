@@ -77,6 +77,24 @@ class Database:
                 db.commit()
     
     @staticmethod
+    def migrate_add_project_category_notes():
+        """Add category and notes columns to projects table if they don't exist."""
+        with Database.get_db() as db:
+            # Check current columns in projects table
+            cursor = db.execute("PRAGMA table_info(projects)")
+            columns = [column[1] for column in cursor.fetchall()]
+            
+            if 'category' not in columns:
+                db.execute('ALTER TABLE projects ADD COLUMN category TEXT')
+                print("Added category column to projects table")
+            
+            if 'notes' not in columns:
+                db.execute('ALTER TABLE projects ADD COLUMN notes TEXT')
+                print("Added notes column to projects table")
+            
+            db.commit()
+    
+    @staticmethod
     def init_db():
         """Initialize the database with tables."""
         with Database.get_db() as db:

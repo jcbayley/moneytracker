@@ -178,3 +178,32 @@ def get_by_category(category, start_date=None, end_date=None, account_types=None
             
             query += ' ORDER BY t.date DESC, t.id DESC'
             return db.execute(query, params).fetchall()
+
+def get_income_transactions(start_date=None, end_date=None, account_types=None):
+    """Get income transactions (excluding transfers) with filters."""
+    with Database.get_db() as db:
+        query = '''
+            SELECT t.*, a.name as account_name
+            FROM transactions t
+            JOIN accounts a ON t.account_id = a.id
+            WHERE t.type = 'income'
+        '''
+        params = []
+        
+        if start_date and end_date:
+            query += ' AND t.date BETWEEN ? AND ?'
+            params.extend([start_date, end_date])
+        elif start_date:
+            query += ' AND t.date >= ?'
+            params.append(start_date)
+        elif end_date:
+            query += ' AND t.date <= ?'
+            params.append(end_date)
+        
+        if account_types:
+            placeholders = ",".join(["?" for _ in account_types])
+            query += f' AND a.type IN ({placeholders})'
+            params.extend(account_types)
+        
+        query += ' ORDER BY t.date DESC, t.id DESC'
+        return db.execute(query, params).fetchall()

@@ -252,8 +252,8 @@
                             <canvas id="project-category-chart" width="400" height="400"></canvas>
                         </div>
                         <div style="width: 48%;">
-                            <h4>Recent Transactions</h4>
-                            <div id="project-transactions" style="max-height: 400px; overflow-y: auto;"></div>
+                            <h4>Project Transactions</h4>
+                            <div id="project-transactions"></div>
                         </div>
                     </div>
                 </div>
@@ -334,8 +334,16 @@
                         <canvas id="trendChart"></canvas>
                     </div>
                     <div class="chart-card">
-                        <h3>Account Balances</h3>
-                        <canvas id="accountChart"></canvas>
+                        <h3>Net Worth Over Time</h3>
+                        <canvas id="netWorthChart"></canvas>
+                    </div>
+                    <div class="chart-card">
+                        <h3>Flow Analysis</h3>
+                        <canvas id="flowChart"></canvas>
+                    </div>
+                    <div class="chart-card">
+                        <h3>Top 10 Payees</h3>
+                        <canvas id="topPayeesChart"></canvas>
                     </div>
                 </div>
             </div>
@@ -632,6 +640,16 @@
             <div class="form-group">
                 <label>Description (Optional)</label>
                 <textarea id="modal-project-description" rows="3"></textarea>
+            </div>
+            
+            <div class="form-group">
+                <label>Category (Optional)</label>
+                <input type="text" id="modal-project-category">
+            </div>
+            
+            <div class="form-group">
+                <label>Notes (Optional)</label>
+                <textarea id="modal-project-notes" rows="3"></textarea>
             </div>
             
             <div style="margin-top: 20px;">

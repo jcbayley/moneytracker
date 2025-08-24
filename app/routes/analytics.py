@@ -146,9 +146,17 @@ def get_chart_data():
     remaining_categories = sorted(list(categories_set - set(all_categories)))
     all_categories.extend(remaining_categories)
     
+    # Get monthly income data for the same period
+    monthly_income = {}
+    trends = analytics.get_monthly_trend(start_date, end_date, account_types)
+    for trend in trends:
+        if trend['month'] in sorted_months:
+            monthly_income[trend['month']] = trend['income']
+    
     category_trend_data = {
         'labels': sorted_months,
-        'datasets': []
+        'datasets': [],
+        'monthly_income': [monthly_income.get(month, 0) for month in sorted_months]
     }
     
     for i, category in enumerate(all_categories):
@@ -193,3 +201,103 @@ def get_category_transactions(category):
     )
     
     return jsonify([dict(row) for row in transactions])
+
+
+@analytics_bp.route('/api/analytics/income-transactions')
+def get_income_transactions():
+    """Get income transactions (excluding transfers) with filters."""
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+    account_types = request.args.getlist('account_types')
+    
+    transactions = transaction.get_income_transactions(
+        start_date, end_date, account_types
+    )
+    
+    return jsonify([dict(row) for row in transactions])
+
+
+@analytics_bp.route('/api/analytics/top-payees')
+def get_top_payees():
+    """Get top payees by spending amount with filters."""
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+    account_types = request.args.getlist('account_types')
+    limit = request.args.get('limit', 10, type=int)
+    
+    payees = analytics.get_top_payees(start_date, end_date, account_types, limit)
+    
+    return jsonify({
+        'labels': [p['payee'] for p in payees],
+        'datasets': [{
+            'label': 'Amount Spent',
+            'data': [p['total'] for p in payees],
+            'backgroundColor': [
+                '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', 
+                '#FF9F40', '#C9CBCF', '#FF6B6B', '#4ECDC4', '#45B7D1'
+            ][:len(payees)]
+        }]
+    })
+
+
+@analytics_bp.route('/api/analytics/savings-investments-flow')
+def get_savings_investments_flow():
+    """Get monthly savings and investments flow data with filters."""
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+    account_types = request.args.getlist('account_types')
+    
+    flow_data = analytics.get_savings_investments_flow(start_date, end_date, account_types)
+    
+    if not flow_data:
+        return jsonify({
+            'labels': [],
+            'datasets': [],
+            'monthly_income': []
+        })
+    
+    return jsonify({
+        'labels': [f['month'] for f in flow_data],
+        'datasets': [
+            {
+                'label': 'Savings Net',
+                'data': [f['savings_net'] for f in flow_data],
+                'backgroundColor': '#4BC0C0',
+                'borderColor': '#4BC0C0',
+                'borderWidth': 1
+            },
+            {
+                'label': 'Investments Net',
+                'data': [f['investments_net'] for f in flow_data],
+                'backgroundColor': '#9966FF',
+                'borderColor': '#9966FF',
+                'borderWidth': 1
+            },
+            {
+                'label': 'Other Outgoing',
+                'data': [f['other_outgoing'] for f in flow_data],
+                'backgroundColor': '#FF6384',
+                'borderColor': '#FF6384',
+                'borderWidth': 1
+            }
+        ],
+        'monthly_income': [f['income'] for f in flow_data]
+    })
+
+
+@analytics_bp.route('/api/analytics/net-worth-history')
+def get_net_worth_history():
+    """Get net worth history over all time (ignoring date filters)."""
+    history = analytics.get_net_worth_history()
+    
+    return jsonify({
+        'labels': [h['month'] for h in history],
+        'datasets': [{
+            'label': 'Net Worth',
+            'data': [h['net_worth'] for h in history],
+            'borderColor': '#4BC0C0',
+            'backgroundColor': 'rgba(75, 192, 192, 0.1)',
+            'tension': 0.4,
+            'fill': True
+        }]
+    })
