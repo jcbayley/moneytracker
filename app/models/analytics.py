@@ -114,11 +114,11 @@ def get_monthly_trend(start_date=None, end_date=None, account_types=None):
                     SUM(CASE WHEN t.type = 'income' THEN t.amount ELSE 0 END) as income,
                     SUM(CASE WHEN t.type = 'expense' THEN ABS(t.amount) ELSE 0 END) as expenses,
                     SUM(CASE 
-                        WHEN t.type = 'transfer' AND t.amount > 0 AND a.type = 'savings' THEN t.amount 
+                        WHEN a.type = 'savings' AND t.type = 'transfer' THEN t.amount 
                         ELSE 0 
                     END) as savings,
                     SUM(CASE 
-                        WHEN t.type = 'transfer' AND t.amount > 0 AND a.type = 'investment' THEN t.amount 
+                        WHEN a.type = 'investment' AND t.type = 'transfer' THEN t.amount 
                         ELSE 0 
                     END) as investments
                 FROM transactions t
@@ -126,7 +126,7 @@ def get_monthly_trend(start_date=None, end_date=None, account_types=None):
                 WHERE 1=1{date_filter}{account_filter}
                 GROUP BY month
                 ORDER BY month DESC
-                LIMIT 6
+                LIMIT 12
             '''
             
             trends = db.execute(query, params).fetchall()
@@ -234,15 +234,15 @@ def get_savings_investments_flow(start_date=None, end_date=None, account_types=N
             SELECT 
                 strftime('%Y-%m', t.date) as month,
                 SUM(CASE 
-                    WHEN t.type = 'transfer' AND t.amount > 0 AND a.type = 'savings' 
+                    WHEN a.type = 'savings' AND t.type = 'transfer'
                     THEN t.amount ELSE 0 
                 END) as savings_net,
                 SUM(CASE 
-                    WHEN t.type = 'transfer' AND t.amount > 0 AND a.type = 'investment' 
+                    WHEN a.type = 'investment' AND t.type = 'transfer'
                     THEN t.amount ELSE 0 
                 END) as investments_net,
                 SUM(CASE 
-                    WHEN t.type = 'expense' AND a.type NOT IN ('savings', 'investment')
+                    WHEN t.type = 'expense'
                     THEN ABS(t.amount) ELSE 0 
                 END) as other_outgoing,
                 SUM(CASE 
@@ -254,7 +254,7 @@ def get_savings_investments_flow(start_date=None, end_date=None, account_types=N
             WHERE 1=1{date_filter}{account_filter}
             GROUP BY month
             ORDER BY month DESC
-            LIMIT 6
+            LIMIT 12
         '''
         
         results = db.execute(query, params).fetchall()
