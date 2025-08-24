@@ -15,7 +15,7 @@ def projects():
             return jsonify({'error': 'Project name is required'}), 400
         
         try:
-            project_id = project.create(data['name'], data.get('description'))
+            project_id = project.create(data['name'], data.get('description'), data.get('category'), data.get('notes'))
             return jsonify({'message': 'Project created', 'id': project_id}), 201
         except Exception as e:
             return jsonify({'error': str(e)}), 400
@@ -41,7 +41,7 @@ def project_detail(project_id):
             return jsonify({'error': 'Project name is required'}), 400
         
         try:
-            project.update(project_id, data['name'], data.get('description'))
+            project.update(project_id, data['name'], data.get('description'), data.get('category'), data.get('notes'))
             return jsonify({'message': 'Project updated'})
         except Exception as e:
             return jsonify({'error': str(e)}), 400

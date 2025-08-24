@@ -141,6 +141,11 @@ class API {
         return this.call(`/api/analytics/category/${encodeURIComponent(category)}?${params.toString()}`);
     }
 
+    static async getIncomeTransactions(filters = {}) {
+        const params = this._buildParams(filters);
+        return this.call(`/api/analytics/income-transactions?${params.toString()}`);
+    }
+
     // Helper method to properly handle array parameters
     static _buildParams(filters) {
         const params = new URLSearchParams();
@@ -169,5 +174,25 @@ class API {
 
     static async saveSettings(settings) {
         return this.call('/api/settings', 'POST', settings);
+    }
+
+    // New analytics endpoints
+    static async getTopPayees(filters = {}) {
+        const params = this._buildParams(filters);
+        return this.call(`/api/analytics/top-payees?${params.toString()}`);
+    }
+
+    static async getSavingsInvestmentsFlow(filters = {}) {
+        const params = this._buildParams(filters);
+        return this.call(`/api/analytics/savings-investments-flow?${params.toString()}`);
+    }
+
+    static async getNetWorthHistory() {
+        return this.call('/api/analytics/net-worth-history');
+    }
+
+    // AI Query endpoints
+    static async submitAIQuery(query) {
+        return this.call('/api/ai/query', 'POST', { query: query });
     }
 }

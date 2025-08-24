@@ -306,9 +306,9 @@ tr:hover {
 .charts-container {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
-    grid-template-rows: repeat(2, 800px);
+    grid-template-rows: repeat(3, minmax(400px, 500px));
     gap: 20px;
-    min-height: 1600px;
+    max-height: 1800px;
 }
 
 .chart-card {
@@ -316,6 +316,13 @@ tr:hover {
     border-radius: 10px;
     padding: 20px;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+    max-height: 500px;
+}
+
+.chart-card canvas {
+    max-height: 420px !important;
+    width: 100% !important;
 }
 
 .hidden {
