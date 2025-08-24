@@ -1,8 +1,8 @@
 """Analytics routes."""
 from flask import Blueprint, request, jsonify
-from ..models.analytics import AnalyticsModel
-from ..models.account import AccountModel
-from ..models.transaction import TransactionModel
+from ..models import analytics
+from ..models import account
+from ..models import transaction
 
 analytics_bp = Blueprint('analytics', __name__)
 
@@ -15,10 +15,10 @@ def get_stats():
     account_types = request.args.getlist('account_types')
     
     # Get total balance
-    total_balance = AccountModel.get_total_balance(account_types if account_types else None)
+    total_balance = account.get_total_balance(account_types if account_types else None)
     
     # Get income/expense stats
-    stats = AnalyticsModel.get_stats(start_date, end_date, account_types)
+    stats = analytics.get_stats(start_date, end_date, account_types)
     stats['total_balance'] = total_balance
     
     return jsonify(stats)
@@ -32,7 +32,7 @@ def get_chart_data():
     account_types = request.args.getlist('account_types')
     
     # Category spending
-    categories = AnalyticsModel.get_category_spending(start_date, end_date, account_types)
+    categories = analytics.get_category_spending(start_date, end_date, account_types)
     category_data = {
         'labels': [c['category'] for c in categories],
         'datasets': [{
@@ -45,7 +45,7 @@ def get_chart_data():
     }
     
     # Monthly trend
-    trends = AnalyticsModel.get_monthly_trend(start_date, end_date, account_types)
+    trends = analytics.get_monthly_trend(start_date, end_date, account_types)
     trend_data = {
         'labels': [t['month'] for t in trends],
         'datasets': [
@@ -81,7 +81,7 @@ def get_chart_data():
     }
     
     # Account balances
-    accounts = AccountModel.get_all()
+    accounts = account.get_all()
     if account_types:
         accounts = [a for a in accounts if a['type'] in account_types]
     
@@ -95,7 +95,7 @@ def get_chart_data():
     }
     
     # Category trends
-    category_trends = AnalyticsModel.get_category_trends(start_date, end_date, account_types)
+    category_trends = analytics.get_category_trends(start_date, end_date, account_types)
     
     # Organize by category and month
     category_data_by_month = {}
@@ -153,7 +153,7 @@ def get_category_transactions(category):
     end_date = request.args.get('end_date')
     account_types = request.args.getlist('account_types')
     
-    transactions = TransactionModel.get_by_category(
+    transactions = transaction.get_by_category(
         category, start_date, end_date, account_types
     )
     

@@ -1,6 +1,6 @@
 """Account routes."""
 from flask import Blueprint, request, jsonify
-from ..models.account import AccountModel
+from ..models import account
 
 accounts_bp = Blueprint('accounts', __name__)
 
@@ -10,14 +10,14 @@ def accounts():
     """Handle account operations."""
     if request.method == 'POST':
         data = request.json
-        account_id = AccountModel.create(
+        account_id = account.create(
             data['name'], 
             data['type'], 
             data.get('balance', 0)
         )
         return jsonify({'id': account_id, 'message': 'Account created'})
     
-    accounts = AccountModel.get_all()
+    accounts = account.get_all()
     return jsonify([dict(row) for row in accounts])
 
 
@@ -25,5 +25,5 @@ def accounts():
 def update_account(account_id):
     """Update an account."""
     data = request.json
-    AccountModel.update(account_id, data['name'], data['type'])
+    account.update(account_id, data['name'], data['type'])
     return jsonify({'message': 'Account updated'})

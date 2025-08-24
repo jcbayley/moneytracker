@@ -1,7 +1,7 @@
 """Transaction routes."""
 from flask import Blueprint, request, jsonify
-from ..models.transaction import TransactionModel
-from ..models.recurring import RecurringModel
+from ..models import transaction
+from ..models import recurring
 
 transactions_bp = Blueprint('transactions', __name__)
 
@@ -25,7 +25,7 @@ def transactions():
             # Handle recurring transaction creation
             recurring_id = None
             if data.get('is_recurring'):
-                recurring_id = RecurringModel.create(
+                recurring_id = recurring.create(
                     data['account_id'], data['amount'], data['type'],
                     data.get('payee'), data.get('category'), data.get('notes'),
                     data.get('project'), data['frequency'], data['date'], data.get('end_date'),
@@ -34,7 +34,7 @@ def transactions():
             
             # Handle transfer
             if data.get('type') == 'transfer' and data.get('transfer_account_id'):
-                TransactionModel.create_transfer(
+                transaction.create_transfer(
                     data['account_id'], data['transfer_account_id'], 
                     abs(data['amount']), data['date'],
                     data.get('payee'), data.get('category'), data.get('notes'),
@@ -48,7 +48,7 @@ def transactions():
                 else:
                     amount = abs(amount)
                     
-                TransactionModel.create(
+                transaction.create(
                     data['account_id'], amount, data['date'], data['type'],
                     data.get('payee'), data.get('category'), data.get('notes'),
                     data.get('project'), recurring_id
@@ -61,7 +61,7 @@ def transactions():
     
     try:
         # GET request with filters
-        transactions = TransactionModel.get_filtered(
+        transactions = transaction.get_filtered(
             account_id=request.args.get('account_id'),
             category=request.args.get('category'),
             trans_type=request.args.get('type'),
@@ -90,7 +90,7 @@ def update_transaction(transaction_id):
         if missing_fields:
             return jsonify({'error': f'Missing required fields: {", ".join(missing_fields)}'}), 400
         
-        success = TransactionModel.update(
+        success = transaction.update(
             transaction_id, data['account_id'], data['amount'], 
             data['date'], data['type'], data.get('payee'),
             data.get('category'), data.get('notes'), data.get('project'),
@@ -110,7 +110,7 @@ def update_transaction(transaction_id):
 def delete_transaction(transaction_id):
     """Delete a transaction."""
     try:
-        success = TransactionModel.delete(transaction_id)
+        success = transaction.delete(transaction_id)
         
         if success:
             return jsonify({'message': 'Transaction deleted'})

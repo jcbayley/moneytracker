@@ -6,16 +6,12 @@ import sqlite3
 from datetime import datetime
 from flask import current_app, send_file, request, jsonify
 from ..database import Database
-from ..models.account import AccountModel
-from ..models.payee import PayeeModel
-from ..models.category import CategoryModel
+from ..models import account
+from ..models import payee
+from ..models import category
 
 
-class ImportExportUtils:
-    """Utility class for import/export operations."""
-    
-    @staticmethod
-    def get_database_info():
+def get_database_info():
         """Get database file information."""
         db_path = current_app.config['DATABASE']
         if os.path.exists(db_path):
@@ -31,8 +27,7 @@ class ImportExportUtils:
         
         return {'size': size_str}
     
-    @staticmethod
-    def export_database():
+def export_database():
         """Export the database file."""
         db_path = current_app.config['DATABASE']
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -40,8 +35,7 @@ class ImportExportUtils:
         
         return send_file(db_path, as_attachment=True, download_name=filename)
     
-    @staticmethod
-    def import_database(file):
+def import_database(file):
         """Import a database file."""
         if not file or file.filename == '':
             return {'error': 'No file selected'}, 400
@@ -71,8 +65,7 @@ class ImportExportUtils:
         except Exception as e:
             return {'error': f'Failed to import database: {str(e)}'}, 500
     
-    @staticmethod
-    def export_csv():
+def export_csv():
         """Export transactions to CSV format."""
         with Database.get_db() as db:
             transactions = db.execute('''
@@ -115,8 +108,7 @@ class ImportExportUtils:
             download_name=filename
         )
     
-    @staticmethod
-    def import_csv(file):
+def import_csv(file):
         """Import transactions from CSV format."""
         if not file or file.filename == '':
             return {'error': 'No file selected'}, 400
@@ -133,7 +125,7 @@ class ImportExportUtils:
             skipped_count = 0
             
             # Get existing accounts
-            accounts = {row['name']: row['id'] for row in AccountModel.get_all()}
+            accounts = {row['name']: row['id'] for row in account.get_all()}
             
             # Track payees and categories for bulk insert
             payees_to_add = set()
@@ -141,8 +133,8 @@ class ImportExportUtils:
             
             # First pass: collect all rows and detect transfers
             all_rows = list(csv_reader)
-            transfer_pairs = ImportExportUtils._detect_transfers(all_rows)
-            detected_transfers = ImportExportUtils._identify_transfers(transfer_pairs)
+            transfer_pairs = _detect_transfers(all_rows)
+            detected_transfers = _identify_transfers(transfer_pairs)
             
             # Second pass: import transactions
             with Database.get_db() as db:
@@ -168,7 +160,7 @@ class ImportExportUtils:
                         
                         # Find or create account
                         if account_name not in accounts:
-                            account_id = AccountModel.create(account_name, 'checking', 0)
+                            account_id = account.create(account_name, 'checking', 0)
                             accounts[account_name] = account_id
                         else:
                             account_id = accounts[account_name]
@@ -184,7 +176,7 @@ class ImportExportUtils:
                         ''', (account_id, amount, date, trans_type, payee, category, notes))
                         
                         # Update account balance
-                        AccountModel.update_balance(account_id, amount)
+                        account.update_balance(account_id, amount)
                         
                         imported_count += 1
                         
@@ -193,8 +185,8 @@ class ImportExportUtils:
                         continue
                 
                 # Bulk insert payees and categories
-                PayeeModel.bulk_create(payees_to_add)
-                CategoryModel.bulk_create(categories_to_add)
+                payee.bulk_create(payees_to_add)
+                category.bulk_create(categories_to_add)
                 
                 db.commit()
             
@@ -211,8 +203,7 @@ class ImportExportUtils:
         except Exception as e:
             return {'error': f'Failed to import CSV: {str(e)}'}, 500
     
-    @staticmethod
-    def _detect_transfers(all_rows):
+def _detect_transfers(all_rows):
         """Detect potential transfer pairs in CSV data."""
         transfer_pairs = {}
         for i, row in enumerate(all_rows):
@@ -234,8 +225,7 @@ class ImportExportUtils:
         
         return transfer_pairs
     
-    @staticmethod
-    def _identify_transfers(transfer_pairs):
+def _identify_transfers(transfer_pairs):
         """Identify which transactions are transfers based on patterns."""
         detected_transfers = set()
         

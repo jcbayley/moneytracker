@@ -1,6 +1,6 @@
 """Data import/export routes."""
 from flask import Blueprint, request, jsonify
-from ..utils.import_export import ImportExportUtils
+from ..utils import import_export
 
 data_bp = Blueprint('data', __name__)
 
@@ -8,13 +8,13 @@ data_bp = Blueprint('data', __name__)
 @data_bp.route('/api/database/info')
 def database_info():
     """Get database information."""
-    return jsonify(ImportExportUtils.get_database_info())
+    return jsonify(import_export.get_database_info())
 
 
 @data_bp.route('/api/export')
 def export_database():
     """Export the database file."""
-    return ImportExportUtils.export_database()
+    return import_export.export_database()
 
 
 @data_bp.route('/api/import', methods=['POST'])
@@ -24,14 +24,14 @@ def import_database():
         return jsonify({'error': 'No file provided'}), 400
     
     file = request.files['file']
-    result, status_code = ImportExportUtils.import_database(file)
+    result, status_code = import_export.import_database(file)
     return jsonify(result), status_code
 
 
 @data_bp.route('/api/export/csv')
 def export_csv():
     """Export transactions to CSV format."""
-    return ImportExportUtils.export_csv()
+    return import_export.export_csv()
 
 
 @data_bp.route('/api/import/csv', methods=['POST'])
@@ -41,5 +41,5 @@ def import_csv():
         return jsonify({'error': 'No file provided'}), 400
     
     file = request.files['file']
-    result, status_code = ImportExportUtils.import_csv(file)
+    result, status_code = import_export.import_csv(file)
     return jsonify(result), status_code

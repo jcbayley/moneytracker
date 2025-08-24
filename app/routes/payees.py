@@ -1,6 +1,6 @@
 """Payee routes."""
 from flask import Blueprint, request, jsonify
-from ..models.payee import PayeeModel
+from ..models import payee
 
 payees_bp = Blueprint('payees', __name__)
 
@@ -10,12 +10,12 @@ def payees():
     """Handle payee operations."""
     if request.method == 'POST':
         data = request.json
-        success = PayeeModel.create(data['name'])
+        success = payee.create(data['name'])
         
         if success:
             return jsonify({'message': 'Payee created'})
         else:
             return jsonify({'message': 'Payee already exists'})
     
-    payees = PayeeModel.get_all()
+    payees = payee.get_all()
     return jsonify([dict(row) for row in payees])

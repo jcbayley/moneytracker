@@ -1,14 +1,10 @@
-"""Recurring transaction model and operations."""
+"""Recurring transaction operations and queries."""
 from datetime import datetime, timedelta
 from ..database import Database
-from .transaction import TransactionModel
+from . import transaction
 
 
-class RecurringModel:
-    """Recurring transaction operations."""
-    
-    @staticmethod
-    def get_all_active():
+def get_all_active():
         """Get all active recurring transactions with next dates."""
         with Database.get_db() as db:
             return db.execute('''
@@ -26,9 +22,8 @@ class RecurringModel:
                 WHERE r.is_active = 1
             ''').fetchall()
     
-    @staticmethod
-    def create(account_id, amount, trans_type, payee, category, notes, project, 
-               frequency, start_date, end_date=None, increment_amount=0):
+def create(account_id, amount, trans_type, payee, category, notes, project, 
+           frequency, start_date, end_date=None, increment_amount=0):
         """Create a recurring transaction."""
         with Database.get_db() as db:
             cursor = db.execute('''
@@ -41,8 +36,7 @@ class RecurringModel:
             db.commit()
             return cursor.lastrowid
     
-    @staticmethod
-    def deactivate(recurring_id):
+def deactivate(recurring_id):
         """Deactivate a recurring transaction."""
         with Database.get_db() as db:
             db.execute(
@@ -51,8 +45,7 @@ class RecurringModel:
             )
             db.commit()
     
-    @staticmethod
-    def process_due():
+def process_due():
         """Process all due recurring transactions."""
         today = datetime.now().date()
         processed = 0
@@ -74,7 +67,7 @@ class RecurringModel:
                 increment_amount = 0
             
             # Process all missed occurrences up to today
-            next_date = RecurringModel._calculate_next_date(last_processed, r['frequency'])
+            next_date = _calculate_next_date(last_processed, r['frequency'])
             original_last_processed = last_processed
             
             while next_date <= today:
@@ -92,7 +85,7 @@ class RecurringModel:
                     
                     if dest_account:
                         # Create transfer (both debit and credit transactions)
-                        TransactionModel.create_transfer(
+                        transaction.create_transfer(
                             r['account_id'], dest_account['id'], 
                             abs(current_amount), next_date,
                             r['payee'], r['category'], r['notes'], r['project'], r['id']
@@ -100,7 +93,7 @@ class RecurringModel:
                     else:
                         # Fallback: create single transaction if dest account not found
                         print(f"Warning: Destination account '{r['payee']}' not found for recurring transfer")
-                        TransactionModel.create(
+                        transaction.create(
                             r['account_id'], -abs(current_amount), next_date, r['type'],
                             r['payee'], r['category'], r['notes'], r['project'], r['id']
                         )
@@ -112,7 +105,7 @@ class RecurringModel:
                     else:
                         amount = abs(current_amount)
                         
-                    TransactionModel.create(
+                    transaction.create(
                         r['account_id'], amount, next_date, r['type'],
                         r['payee'], r['category'], r['notes'], r['project'], r['id']
                     )
@@ -121,7 +114,7 @@ class RecurringModel:
                 
                 # Update for next iteration
                 last_processed = next_date
-                next_date = RecurringModel._calculate_next_date(next_date, r['frequency'])
+                next_date = _calculate_next_date(next_date, r['frequency'])
             
             # Update the database only if this recurring transaction had occurrences
             if last_processed != original_last_processed:
@@ -134,8 +127,7 @@ class RecurringModel:
         
         return processed
     
-    @staticmethod
-    def _calculate_next_date(last_date, frequency):
+def _calculate_next_date(last_date, frequency):
         """Calculate the next date for a recurring transaction."""
         if frequency == 'daily':
             return last_date + timedelta(days=1)

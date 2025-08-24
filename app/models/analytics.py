@@ -1,12 +1,8 @@
-"""Analytics model for financial statistics and charts."""
+"""Analytics queries and calculations."""
 from ..database import Database
 
 
-class AnalyticsModel:
-    """Analytics queries and calculations."""
-    
-    @staticmethod
-    def get_stats(start_date=None, end_date=None, account_types=None):
+def get_stats(start_date=None, end_date=None, account_types=None):
         """Get financial statistics with filters."""
         with Database.get_db() as db:
             # Build filters
@@ -57,8 +53,7 @@ class AnalyticsModel:
                 'net_monthly': income - expenses
             }
     
-    @staticmethod
-    def get_category_spending(start_date=None, end_date=None, account_types=None):
+def get_category_spending(start_date=None, end_date=None, account_types=None):
         """Get spending by category."""
         with Database.get_db() as db:
             date_filter = ''
@@ -91,8 +86,7 @@ class AnalyticsModel:
             
             return db.execute(query, params).fetchall()
     
-    @staticmethod
-    def get_monthly_trend(start_date=None, end_date=None, account_types=None):
+def get_monthly_trend(start_date=None, end_date=None, account_types=None):
         """Get monthly income/expense/savings/investment trend."""
         with Database.get_db() as db:
             date_filter = ''
@@ -138,8 +132,7 @@ class AnalyticsModel:
             trends = db.execute(query, params).fetchall()
             return list(reversed(trends))
     
-    @staticmethod
-    def get_category_trends(start_date=None, end_date=None, account_types=None):
+def get_category_trends(start_date=None, end_date=None, account_types=None):
         """Get category trends over time."""
         with Database.get_db() as db:
             date_filter = ''

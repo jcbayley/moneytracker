@@ -1,14 +1,10 @@
-"""Transaction model and operations."""
+"""Transaction operations and queries."""
 from datetime import datetime, timedelta
 from ..database import Database
-from .account import AccountModel
+from . import account
 
 
-class TransactionModel:
-    """Transaction operations and queries."""
-    
-    @staticmethod
-    def get_filtered(account_id=None, category=None, trans_type=None, date_from=None, date_to=None, limit=100):
+def get_filtered(account_id=None, category=None, trans_type=None, date_from=None, date_to=None, limit=100):
         """Get transactions with filters."""
         with Database.get_db() as db:
             query = '''
@@ -45,9 +41,8 @@ class TransactionModel:
             
             return db.execute(query, params).fetchall()
     
-    @staticmethod
-    def create(account_id, amount, date, trans_type, payee=None, category=None, 
-               notes=None, project=None, recurring_id=None):
+def create(account_id, amount, date, trans_type, payee=None, category=None, 
+           notes=None, project=None, recurring_id=None):
         """Create a single transaction."""
         with Database.get_db() as db:
             cursor = db.execute('''
@@ -57,18 +52,17 @@ class TransactionModel:
             ''', (account_id, amount, date, trans_type, payee, category, notes, project, recurring_id))
             
             # Update account balance using existing connection
-            AccountModel.update_balance(account_id, amount, db)
+            account.update_balance(account_id, amount, db)
             db.commit()
             return cursor.lastrowid
     
-    @staticmethod
-    def create_transfer(from_account_id, to_account_id, amount, date, payee=None, 
-                       category=None, notes=None, project=None, recurring_id=None):
+def create_transfer(from_account_id, to_account_id, amount, date, payee=None, 
+                   category=None, notes=None, project=None, recurring_id=None):
         """Create a transfer between accounts (dual transactions)."""
         with Database.get_db() as db:
             # Get account names for payees
-            from_account = AccountModel.get_by_id(from_account_id)
-            to_account = AccountModel.get_by_id(to_account_id)
+            from_account = account.get_by_id(from_account_id)
+            to_account = account.get_by_id(to_account_id)
             
             # From account (negative)
             db.execute('''
@@ -89,13 +83,12 @@ class TransactionModel:
                   category, notes, project, recurring_id))
             
             # Update both account balances using existing connection
-            AccountModel.update_balance(from_account_id, -abs(amount), db)
-            AccountModel.update_balance(to_account_id, abs(amount), db)
+            account.update_balance(from_account_id, -abs(amount), db)
+            account.update_balance(to_account_id, abs(amount), db)
             db.commit()
     
-    @staticmethod
-    def update(transaction_id, account_id, amount, date, trans_type, payee=None,
-               category=None, notes=None, project=None, transfer_account_id=None):
+def update(transaction_id, account_id, amount, date, trans_type, payee=None,
+           category=None, notes=None, project=None, transfer_account_id=None):
         """Update an existing transaction."""
         with Database.get_db() as db:
             # Get current transaction
@@ -112,13 +105,13 @@ class TransactionModel:
             
             # Handle transfer logic
             if trans_type == 'transfer' and transfer_account_id:
-                dest_account = AccountModel.get_by_id(transfer_account_id)
+                dest_account = account.get_by_id(transfer_account_id)
                 if old_amount < 0:  # This was the source transaction
                     new_amount = -abs(amount)
                     payee = dest_account['name'] if dest_account else 'Transfer'
                 else:  # This was the destination transaction
                     new_amount = abs(amount)
-                    source_account = AccountModel.get_by_id(account_id)
+                    source_account = account.get_by_id(account_id)
                     payee = source_account['name'] if source_account else 'Transfer'
             else:
                 # Regular transaction
@@ -134,16 +127,15 @@ class TransactionModel:
             # Adjust account balances using existing connection
             if old_account_id == account_id:
                 balance_diff = new_amount - old_amount
-                AccountModel.update_balance(old_account_id, balance_diff, db)
+                account.update_balance(old_account_id, balance_diff, db)
             else:
-                AccountModel.update_balance(old_account_id, -old_amount, db)
-                AccountModel.update_balance(account_id, new_amount, db)
+                account.update_balance(old_account_id, -old_amount, db)
+                account.update_balance(account_id, new_amount, db)
             
             db.commit()
             return True
     
-    @staticmethod
-    def delete(transaction_id):
+def delete(transaction_id):
         """Delete a transaction."""
         with Database.get_db() as db:
             trans = db.execute(
@@ -153,13 +145,12 @@ class TransactionModel:
             
             if trans:
                 db.execute('DELETE FROM transactions WHERE id = ?', (transaction_id,))
-                AccountModel.update_balance(trans['account_id'], -trans['amount'], db)
+                account.update_balance(trans['account_id'], -trans['amount'], db)
                 db.commit()
                 return True
             return False
     
-    @staticmethod
-    def get_by_category(category, start_date=None, end_date=None, account_types=None):
+def get_by_category(category, start_date=None, end_date=None, account_types=None):
         """Get transactions for a specific category with filters."""
         with Database.get_db() as db:
             query = '''

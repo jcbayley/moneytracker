@@ -1,6 +1,6 @@
 """Recurring transaction routes."""
 from flask import Blueprint, jsonify
-from ..models.recurring import RecurringModel
+from ..models import recurring
 
 recurring_bp = Blueprint('recurring', __name__)
 
@@ -8,14 +8,14 @@ recurring_bp = Blueprint('recurring', __name__)
 @recurring_bp.route('/api/recurring', methods=['GET'])
 def get_recurring():
     """Get all recurring transactions."""
-    recurring = RecurringModel.get_all_active()
-    return jsonify([dict(row) for row in recurring])
+    recurring_transactions = recurring.get_all_active()
+    return jsonify([dict(row) for row in recurring_transactions])
 
 
 @recurring_bp.route('/api/recurring/<int:recurring_id>', methods=['DELETE'])
 def delete_recurring(recurring_id):
     """Delete (deactivate) a recurring transaction."""
-    RecurringModel.deactivate(recurring_id)
+    recurring.deactivate(recurring_id)
     return jsonify({'message': 'Recurring transaction deleted'})
 
 
@@ -23,7 +23,7 @@ def delete_recurring(recurring_id):
 def process_recurring():
     """Process due recurring transactions."""
     try:
-        processed = RecurringModel.process_due()
+        processed = recurring.process_due()
         
         message = f'Processed {processed} recurring transaction(s)' if processed > 0 else 'No recurring transactions are due'
         return jsonify({'message': message, 'processed': processed})

@@ -1,6 +1,6 @@
 """Category routes."""
 from flask import Blueprint, request, jsonify
-from ..models.category import CategoryModel
+from ..models import category
 
 categories_bp = Blueprint('categories', __name__)
 
@@ -10,12 +10,12 @@ def categories():
     """Handle category operations."""
     if request.method == 'POST':
         data = request.json
-        success = CategoryModel.create(data['name'])
+        success = category.create(data['name'])
         
         if success:
             return jsonify({'message': 'Category created'})
         else:
             return jsonify({'message': 'Category already exists'})
     
-    categories = CategoryModel.get_all()
+    categories = category.get_all()
     return jsonify(categories)
