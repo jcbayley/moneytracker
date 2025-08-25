@@ -98,24 +98,10 @@ def test_api_connection():
             test_url = f"{url.rstrip('/')}/api/generate"
             payload = {
                 "model": model,
-                "prompt": "test",
+                "prompt": "test: return a two word prompt",
                 "stream": False
             }
-            response = requests.post(test_url, json=payload, timeout=10)
-            
-        elif 'openai' in url.lower():
-            # OpenAI-compatible API test
-            test_url = f"{url.rstrip('/')}/chat/completions"
-            headers = {"Content-Type": "application/json"}
-            if api_key:
-                headers["Authorization"] = f"Bearer {api_key}"
-                
-            payload = {
-                "model": model,
-                "messages": [{"role": "user", "content": "test"}],
-                "max_tokens": 1
-            }
-            response = requests.post(test_url, json=payload, headers=headers, timeout=10)
+            response = requests.post(test_url, json=payload, timeout=60)
             
         else:
             # Generic API test - try Ollama format first
@@ -125,7 +111,7 @@ def test_api_connection():
                 "prompt": "test",
                 "stream": False
             }
-            response = requests.post(test_url, json=payload, timeout=10)
+            response = requests.post(test_url, json=payload, timeout=60)
         
         if response.status_code == 200:
             return jsonify({'success': True})

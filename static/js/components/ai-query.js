@@ -149,14 +149,17 @@ const AIQueryComponent = {
     },
     
     // Model management functions
-    async checkModelStatus() {
+    async checkModelStatus(showError = true) {
         try {
             const response = await fetch('/api/ai/model/status');
             const result = await response.json();
             this.updateModelStatus(result);
         } catch (error) {
             console.error('Error checking model status:', error);
-            UI.showNotification('Failed to check model status', 'error');
+            // Only show error notification if explicitly requested (not on startup)
+            if (showError) {
+                UI.showNotification('Failed to check model status', 'error');
+            }
         }
     },
 
@@ -279,8 +282,8 @@ const AIQueryComponent = {
             apiRadio.addEventListener('change', () => this.switchModelType('api'));
         }
         
-        // Check model status on load
-        this.checkModelStatus();
+        // Check model status on load (silently - don't show error popup)
+        this.checkModelStatus(false);
     },
 
     switchModelType(type) {

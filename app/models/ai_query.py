@@ -22,7 +22,9 @@ class AIQueryService:
         
         os.makedirs(self.model_dir, exist_ok=True)
         self._load_config()
-        self._load_model()
+        # Only load local model if config is set to local
+        if self._config.get('type') == 'local':
+            self._load_model()
     
     def _load_model(self):
         """Load the AI model if available."""
@@ -130,34 +132,18 @@ class AIQueryService:
                     "prompt": prompt,
                     "stream": False,
                     "options": {
-                        "temperature": 0.7,
-                        "top_p": 0.9
+                        "temperature": 0.1,  # Lower temp for more consistent results
+                        "top_p": 0.9,
+                        "num_predict": 100   # Limit output tokens for speed
                     }
                 }
-                response = requests.post(api_url, json=payload, timeout=30)
+                response = requests.post(api_url, json=payload, timeout=120)
                 if response.status_code == 200:
-                    return response.json().get('response', '')
+                    result = response.json().get('response', '')
+                    return result
                 else:
                     raise Exception(f"API error: {response.status_code}")
                     
-            elif 'openai' in url.lower():
-                # OpenAI-compatible API
-                api_url = f"{url.rstrip('/')}/chat/completions"
-                headers = {"Content-Type": "application/json"}
-                if api_key:
-                    headers["Authorization"] = f"Bearer {api_key}"
-                    
-                payload = {
-                    "model": model,
-                    "messages": [{"role": "user", "content": prompt}],
-                    "temperature": 0.7,
-                    "max_tokens": 512
-                }
-                response = requests.post(api_url, json=payload, headers=headers, timeout=30)
-                if response.status_code == 200:
-                    return response.json()['choices'][0]['message']['content']
-                else:
-                    raise Exception(f"API error: {response.status_code}")
             else:
                 raise Exception("Unsupported API type")
                 
@@ -191,39 +177,31 @@ class AIQueryService:
         # Get available categories and payees from database
         db_context = self._get_database_context()
         
-        prompt = f"""Extract financial query parameters as JSON:
-
+        prompt = f"""Parse financial query to JSON for sql search:
 Query: "{query}"
 
-Available data in database:
-Categories: {', '.join(db_context['categories'][:20])}
-Payees: {', '.join(db_context['payees'][:20])}
-Projects: {', '.join(db_context['projects'][:10])}
+Categories: {', '.join(db_context['categories'][:10])}
+Payees: {', '.join(db_context['payees'][:10])}
 
-INTENT MAPPING EXAMPLES:
-- "largest/biggest/most expensive" → intent: "top" (will ORDER BY amount DESC)
-- "smallest/cheapest/lowest" → intent: "top" (will ORDER BY amount DESC, but show smallest)
-- "total/sum/how much spent" → intent: "sum" (will calculate total)
-- "average/mean" → intent: "average" (will calculate average)
-- "how many/count" → intent: "count" (will count transactions)
-- "show me/find/list" → intent: "search" (will show transactions)
+RULES:
+- Only use filters if EXPLICITLY mentioned in query
+- For dates: support specific dates like "2024-01", "january", "march 2024", "2024-03-15" as custom_date
+- Only filter by payee if query specifically mentions a payee name
+- Only filter by category if query specifically mentions a category
+- Auto-detect transaction type from keywords:
+  - "expense/expenses/spent/spending/paid/cost/bill" → "expense"
+  - "income/earned/salary/revenue/received" → "income" 
+  - "transfer" → "transfer"
 
-TIME PERIOD DETECTION:
-- Look for: today, yesterday, last week, this month, last month, this year, last year
-- "past week" = "last_week", "current month" = "this_month"
-
-Return JSON with:
-- intent: "search", "sum", "top", "average", or "count"
-- time_period: exact match from list above or null
-- categories: EXACT category names from available list (empty if not mentioned)
-- payees: EXACT payee names from available list (empty if not mentioned)  
-- projects: EXACT project names from available list (empty if not mentioned)
-- amount_filter: {{"type": "greater"/"less", "amount": number}} or null
-- transaction_type: "income", "expense", "transfer" or null (detect from context)
-
-CRITICAL: For "largest/biggest/top" queries, ALWAYS use intent: "top" - this ensures proper sorting by amount!
-
-JSON only:"""
+Return JSON:
+{{
+  "intent": "search|sum|top|average|count",
+  "time_period": "today|yesterday|last_week|this_month|last_month|this_year|last_year" or null,
+  "custom_date": "YYYY-MM-DD or YYYY-MM or specific date string" or null,
+  "categories": ["only if explicitly mentioned"],
+  "payees": ["only if explicitly mentioned"],
+  "transaction_type": "income|expense|transfer" or null
+}}"""
         
         output = self._call_llm(prompt)
         
@@ -232,15 +210,38 @@ JSON only:"""
         json_end = output.rfind('}') + 1
         if json_start >= 0 and json_end > json_start:
             try:
-                return json.loads(output[json_start:json_end])
+                result = json.loads(output[json_start:json_end])
+                
+                # Fallback transaction type detection if LLM missed it
+                if not result.get('transaction_type'):
+                    query_lower = query.lower()
+                    if any(word in query_lower for word in ['expense', 'expenses', 'spent', 'spending', 'paid', 'cost', 'bill', 'purchase']):
+                        result['transaction_type'] = 'expense'
+                    elif any(word in query_lower for word in ['income', 'earned', 'salary', 'revenue', 'received', 'deposit']):
+                        result['transaction_type'] = 'income'
+                    elif 'transfer' in query_lower:
+                        result['transaction_type'] = 'transfer'
+                
+                return result
             except json.JSONDecodeError:
                 pass
                 
-        # Fallback default
-        return {
-            'intent': 'search', 'time_period': None, 'categories': [],
+        # Fallback default with transaction type detection
+        result = {
+            'intent': 'search', 'time_period': None, 'custom_date': None, 'categories': [],
             'payees': [], 'projects': [], 'amount_filter': None, 'transaction_type': None
         }
+        
+        # Fallback transaction type detection
+        query_lower = query.lower()
+        if any(word in query_lower for word in ['expense', 'expenses', 'spent', 'spending', 'paid', 'cost', 'bill', 'purchase']):
+            result['transaction_type'] = 'expense'
+        elif any(word in query_lower for word in ['income', 'earned', 'salary', 'revenue', 'received', 'deposit']):
+            result['transaction_type'] = 'income'
+        elif 'transfer' in query_lower:
+            result['transaction_type'] = 'transfer'
+            
+        return result
     
     def _get_database_context(self):
         """Get available categories, payees, and projects from database (with caching)."""
@@ -287,22 +288,34 @@ JSON only:"""
                     query += " AND t.date <= ?"
                     params.append(end_date)
             
+            # Custom date filter (flexible dates)
+            elif analysis.get('custom_date'):
+                start_date, end_date = self._parse_custom_date(analysis['custom_date'])
+                if start_date:
+                    query += " AND t.date >= ?"
+                    params.append(start_date)
+                if end_date:
+                    query += " AND t.date <= ?"
+                    params.append(end_date)
+            
             # Type filter
             if analysis.get('transaction_type'):
                 query += " AND t.type = ?"
                 params.append(analysis['transaction_type'])
             
-            # Category filter
-            if analysis.get('categories'):
-                conditions = [f"t.category LIKE ?" for _ in analysis['categories']]
-                query += f" AND ({' OR '.join(conditions)})"
-                params.extend([f"%{cat}%" for cat in analysis['categories']])
+            # Category filter (only if explicitly mentioned and not empty)
+            if analysis.get('categories') and any(cat.strip() for cat in analysis['categories']):
+                conditions = [f"t.category LIKE ?" for cat in analysis['categories'] if cat.strip()]
+                if conditions:
+                    query += f" AND ({' OR '.join(conditions)})"
+                    params.extend([f"%{cat}%" for cat in analysis['categories'] if cat.strip()])
             
-            # Payee filter
-            if analysis.get('payees'):
-                conditions = [f"t.payee LIKE ?" for _ in analysis['payees']]
-                query += f" AND ({' OR '.join(conditions)})"
-                params.extend([f"%{payee}%" for payee in analysis['payees']])
+            # Payee filter (only if explicitly mentioned and not empty)
+            if analysis.get('payees') and any(payee.strip() for payee in analysis['payees']):
+                conditions = [f"t.payee LIKE ?" for payee in analysis['payees'] if payee.strip()]
+                if conditions:
+                    query += f" AND ({' OR '.join(conditions)})"
+                    params.extend([f"%{payee}%" for payee in analysis['payees'] if payee.strip()])
             
             # Project filter
             if analysis.get('projects'):
@@ -382,6 +395,58 @@ JSON only:"""
         last_month_start = last_month_end.replace(day=1)
         return last_month_start, last_month_end
     
+    def _parse_custom_date(self, date_str):
+        """Parse flexible date strings into date ranges."""
+        from datetime import datetime
+        import re
+        
+        date_str = date_str.lower().strip()
+        now = datetime.now()
+        
+        try:
+            # YYYY-MM-DD format
+            if re.match(r'^\d{4}-\d{2}-\d{2}$', date_str):
+                date = datetime.strptime(date_str, '%Y-%m-%d')
+                return date.strftime('%Y-%m-%d'), date.strftime('%Y-%m-%d')
+            
+            # YYYY-MM format
+            elif re.match(r'^\d{4}-\d{2}$', date_str):
+                year, month = date_str.split('-')
+                start = f"{year}-{month}-01"
+                # Get last day of month
+                if int(month) == 12:
+                    end_year, end_month = int(year) + 1, 1
+                else:
+                    end_year, end_month = int(year), int(month) + 1
+                end_date = datetime(end_year, end_month, 1) - timedelta(days=1)
+                return start, end_date.strftime('%Y-%m-%d')
+            
+            # Month names
+            elif any(month in date_str for month in ['january', 'february', 'march', 'april', 'may', 'june', 
+                                                    'july', 'august', 'september', 'october', 'november', 'december']):
+                months = {'january': 1, 'february': 2, 'march': 3, 'april': 4, 'may': 5, 'june': 6,
+                         'july': 7, 'august': 8, 'september': 9, 'october': 10, 'november': 11, 'december': 12}
+                
+                # Extract year if present
+                year_match = re.search(r'\b(20\d{2})\b', date_str)
+                year = int(year_match.group(1)) if year_match else now.year
+                
+                # Find month
+                for month_name, month_num in months.items():
+                    if month_name in date_str:
+                        start = f"{year}-{month_num:02d}-01"
+                        if month_num == 12:
+                            end_year, end_month = year + 1, 1
+                        else:
+                            end_year, end_month = year, month_num + 1
+                        end_date = datetime(end_year, end_month, 1) - timedelta(days=1)
+                        return start, end_date.strftime('%Y-%m-%d')
+            
+        except:
+            pass
+        
+        return None, None
+    
     def _generate_summary(self, user_query, analysis, transactions):
         """Generate AI-powered summary of results."""
         if not transactions:
@@ -397,55 +462,16 @@ JSON only:"""
         for tx in top_transactions:
             top_tx_context.append(f"£{abs(tx['amount']):.2f} to {tx['payee'] or 'Unknown'} on {tx['date']}")
         
-        summary_prompt = f"""Analyze this financial query step by step, then provide ONE final response:
+        summary_prompt = f"""Answer user's financial question:
+Question: "{user_query}"
+Found {count} transactions, total £{total:.2f}
+Top amounts: {'; '.join(top_tx_context[:2])}
 
-USER QUESTION: "{user_query}"
-QUERY ANALYSIS: {analysis}
-ALL TRANSACTIONS: {'; '.join(top_tx_context)}
-
-you should format your response as json with 
- - REASONING: [Complete analysis - what is the user asking for, what does the data show, what's the best answer]
- - RESPONSE: [Final short helpful answer with relevant numbers - this will be shown to the user]"""
+Provide short direct answer:"""
         
         try:
             ai_output = self._call_llm(summary_prompt)
             if ai_output and ai_output.strip():
-                # Try to parse as JSON and extract RESPONSE
-                try:
-                    # Find JSON in the output
-                    json_start = ai_output.find('{')
-                    json_end = ai_output.rfind('}') + 1
-                    
-                    if json_start >= 0 and json_end > json_start:
-                        json_str = ai_output[json_start:json_end]
-                        parsed_json = json.loads(json_str)
-                        
-                        # Extract RESPONSE field
-                        if 'RESPONSE' in parsed_json:
-                            return parsed_json['RESPONSE'].strip()
-                        elif 'response' in parsed_json:
-                            return parsed_json['response'].strip()
-                    
-                    # If JSON parsing fails, try fallback extraction
-                    if 'RESPONSE' in ai_output:
-                        response_start = ai_output.find('RESPONSE')
-                        response_part = ai_output[response_start:].split('\n')[0]
-                        return response_part.replace('RESPONSE:', '').replace('"', '').strip()
-                    
-                except json.JSONDecodeError:
-                    # JSON parsing failed, try to extract manually
-                    if '"RESPONSE"' in ai_output:
-                        response_start = ai_output.find('"RESPONSE"')
-                        response_section = ai_output[response_start:]
-                        # Find the value after "RESPONSE": "
-                        colon_pos = response_section.find(':')
-                        if colon_pos > 0:
-                            value_start = response_section.find('"', colon_pos) + 1
-                            value_end = response_section.find('"', value_start)
-                            if value_start > 0 and value_end > value_start:
-                                return response_section[value_start:value_end].strip()
-                
-                # Final fallback
                 return ai_output.strip()
         except Exception as e:
             print(f"AI summary generation failed: {e}")
