@@ -1,5 +1,5 @@
 {
-    "database_path": "money_tracker.db",
+    "database_path": "demo_money_tracker.db",
     "backup": {
         "enabled": true,
         "interval_hours": 24,

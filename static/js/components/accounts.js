@@ -52,12 +52,12 @@ const AccountsComponent = {
                 const amountElement = UI.createAmountElement(account.balance);
                 
                 div.innerHTML = `
-                    <div>
+                    <div class="account-item-edit">
                         <button class="btn-edit" onclick="editAccount(${account.id}, '${account.name}', '${account.type}'); event.stopPropagation();">✏️</button>
                     </div>
-                    <span>${account.name}</span>
-                    <div>
-                        ${amountElement.outerHTML}
+                    <div class="account-item-details">
+                        <div class="account-name">${account.name}</div>
+                        <div class="account-amount">${amountElement.outerHTML}</div>
                     </div>
                 `;
                 accountsList.appendChild(div);

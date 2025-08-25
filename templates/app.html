@@ -35,106 +35,14 @@
             
             <div class="main-content">
                 
-                <div style="background: white; padding: 20px; border-radius: 10px; margin-bottom: 20px;">
-                    <h3 style="margin-bottom: 15px;">Add Transaction</h3>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label>Account</label>
-                            <select id="account-select"></select>
-                        </div>
-                        <div class="form-group">
-                            <label>Amount (£)</label>
-                            <input type="number" id="amount" step="0.01" placeholder="0.00">
-                        </div>
-                        <div class="form-group">
-                            <label>Date</label>
-                            <input type="date" id="date">
-                        </div>
-                        <div class="form-group">
-                            <label>Type</label>
-                            <select id="type" onchange="toggleTransferFields()">
-                                <option value="expense">Expense</option>
-                                <option value="income">Income</option>
-                                <option value="transfer">Transfer</option>
-                            </select>
-                        </div>
+                <div style="background: white; padding: 15px; border-radius: 10px; margin-bottom: 20px;">
+                    <div style="display: flex; align-items: center; gap: 15px;">
+                        <label style="font-weight: 500; color: #333;">Search Transactions:</label>
+                        <input type="text" id="transaction-search" placeholder="Search payees, notes, categories, amounts..." 
+                               style="flex: 1; padding: 8px; border: 1px solid #ddd; border-radius: 5px;" 
+                               onkeyup="debounceSearch()" oninput="debounceSearch()">
+                        <button class="btn btn-secondary" onclick="clearSearch()">Clear</button>
                     </div>
-                    <div class="form-row" id="transfer-row" style="display: none;">
-                        <div class="form-group">
-                            <label>Transfer To Account</label>
-                            <select id="transfer-account">
-                                <option value="">Select destination account</option>
-                            </select>
-                        </div>
-                        <div class="form-group"></div>
-                        <div class="form-group"></div>
-                        <div class="form-group"></div>
-                    </div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label>Payee</label>
-                            <div class="searchable-select">
-                                <input type="text" id="payee" placeholder="Type to search or select payee..." 
-                                       autocomplete="off" onkeyup="filterPayees()" onclick="showPayeeDropdown()" onblur="hidePayeeDropdown()">
-                                <div id="payee-dropdown" class="dropdown-content" style="display: none;"></div>
-                            </div>
-                        </div>
-                        <div class="form-group">
-                            <label>Category</label>
-                            <div class="searchable-select">
-                                <input type="text" id="category" placeholder="Type to search or select category..." 
-                                       autocomplete="off" onkeyup="filterCategories()" onclick="showCategoryDropdown()" onblur="hideCategoryDropdown()">
-                                <div id="category-dropdown" class="dropdown-content" style="display: none;"></div>
-                            </div>
-                        </div>
-                        <div class="form-group">
-                            <label>Notes</label>
-                            <input type="text" id="notes" placeholder="Optional notes">
-                        </div>
-                        <div class="form-group">
-                            <label>Project</label>
-                            <div class="searchable-select">
-                                <input type="text" id="project" placeholder="Type to search or select project..." 
-                                       autocomplete="off" onkeyup="filterProjects()" onclick="showProjectDropdown()" onblur="hideProjectDropdown()">
-                                <div id="project-dropdown" class="dropdown-content" style="display: none;"></div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div style="margin: 15px 0;">
-                        <input type="checkbox" id="is-recurring" onchange="toggleRecurring()">
-                        <label for="is-recurring">Make this a recurring transaction</label>
-                    </div>
-                    
-                    <div class="recurring-section" id="recurring-section">
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label>Frequency</label>
-                                <select id="frequency">
-                                    <option value="daily">Daily</option>
-                                    <option value="weekly">Weekly</option>
-                                    <option value="biweekly">Bi-weekly</option>
-                                    <option value="monthly" selected>Monthly</option>
-                                    <option value="quarterly">Quarterly</option>
-                                    <option value="yearly">Yearly</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label>End Date (Optional)</label>
-                                <input type="date" id="end-date">
-                            </div>
-                        </div>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label>Increment Amount (Optional)</label>
-                                <input type="number" step="0.01" id="increment-amount" placeholder="0.00">
-                                <small style="color: #6c757d; font-size: 0.8em;">Amount to increase/decrease each cycle (e.g., 0.01 for 1p increase per day)</small>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <button class="btn btn-primary" onclick="addTransaction()">Add Transaction</button>
-                    <button class="btn btn-secondary" onclick="clearForm()">Clear</button>
                 </div>
                 
                 <table>
@@ -195,9 +103,70 @@
                             <th>Project</th>
                             <th>Actions</th>
                         </tr>
+                        <tr id="add-transaction-row" style="background-color: var(--bg-tertiary, #f8f9fa);">
+                            <td>
+                                <input type="date" id="date" style="width: 100%; border: 1px solid var(--border-color, #ddd); border-radius: 4px; padding: 4px; background-color: var(--bg-tertiary, #fff); color: var(--text-primary, #000);">
+                            </td>
+                            <td>
+                                <select id="account-select" style="width: 100%; border: 1px solid var(--border-color, #ddd); border-radius: 4px; padding: 4px; background-color: var(--bg-tertiary, #fff); color: var(--text-primary, #000);"></select>
+                            </td>
+                            <td style="position: relative;">
+                                <div class="searchable-select">
+                                    <input type="text" id="payee" placeholder="Payee..." 
+                                           style="width: 100%; border: 1px solid var(--border-color, #ddd); border-radius: 4px; padding: 4px; background-color: var(--bg-tertiary, #fff); color: var(--text-primary, #000);"
+                                           autocomplete="off" onkeyup="filterPayees()" onclick="showPayeeDropdown()" onblur="hidePayeeDropdown()">
+                                    <div id="payee-dropdown" class="dropdown-content" style="display: none;"></div>
+                                </div>
+                            </td>
+                            <td style="position: relative;">
+                                <div class="searchable-select">
+                                    <input type="text" id="category" placeholder="Category..." 
+                                           style="width: 100%; border: 1px solid var(--border-color, #ddd); border-radius: 4px; padding: 4px; background-color: var(--bg-tertiary, #fff); color: var(--text-primary, #000);"
+                                           autocomplete="off" onkeyup="filterCategories()" onclick="showCategoryDropdown()" onblur="hideCategoryDropdown()">
+                                    <div id="category-dropdown" class="dropdown-content" style="display: none;"></div>
+                                </div>
+                            </td>
+                            <td>
+                                <input type="number" id="amount" step="0.01" placeholder="0.00" 
+                                       style="width: 100%; border: 1px solid var(--border-color, #ddd); border-radius: 4px; padding: 4px; background-color: var(--bg-tertiary, #fff); color: var(--text-primary, #000);">
+                            </td>
+                            <td>
+                                <select id="type" onchange="toggleTransferFields()" 
+                                        style="width: 100%; border: 1px solid var(--border-color, #ddd); border-radius: 4px; padding: 4px; background-color: var(--bg-tertiary, #fff); color: var(--text-primary, #000);">
+                                    <option value="expense">Expense</option>
+                                    <option value="income">Income</option>
+                                    <option value="transfer">Transfer</option>
+                                </select>
+                            </td>
+                            <td>
+                                <input type="text" id="notes" placeholder="Notes..." 
+                                       style="width: 100%; border: 1px solid var(--border-color, #ddd); border-radius: 4px; padding: 4px; background-color: var(--bg-tertiary, #fff); color: var(--text-primary, #000);">
+                            </td>
+                            <td style="position: relative;">
+                                <div class="searchable-select">
+                                    <input type="text" id="project" placeholder="Project..." 
+                                           style="width: 100%; border: 1px solid var(--border-color, #ddd); border-radius: 4px; padding: 4px; background-color: var(--bg-tertiary, #fff); color: var(--text-primary, #000);"
+                                           autocomplete="off" onkeyup="filterProjects()" onclick="showProjectDropdown()" onblur="hideProjectDropdown()">
+                                    <div id="project-dropdown" class="dropdown-content" style="display: none;"></div>
+                                </div>
+                            </td>
+                            <td>
+                                <button class="btn btn-primary" onclick="addTransaction()" style="margin-right: 5px;">Add</button>
+                                <button class="btn btn-secondary" onclick="showRecurringModal()">Recurring</button>
+                            </td>
+                        </tr>
+                        <tr id="transfer-row" style="display: none; background-color: var(--bg-tertiary, #f8f9fa);">
+                            <td colspan="2">
+                                <select id="transfer-account" style="width: 100%; border: 1px solid var(--border-color, #ddd); border-radius: 4px; padding: 4px; background-color: var(--bg-tertiary, #fff); color: var(--text-primary, #000);">
+                                    <option value="">Select destination account</option>
+                                </select>
+                            </td>
+                            <td colspan="7"></td>
+                        </tr>
                     </thead>
                     <tbody id="transactions-list"></tbody>
                 </table>
+                
             </div>
         </div>
 
@@ -242,6 +211,10 @@
                             <div class="stat-card">
                                 <div class="stat-value" id="project-transaction-count">0</div>
                                 <div class="stat-label">Transactions</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-value" id="project-net-spend">£0.00</div>
+                                <div class="stat-label">Net Spend</div>
                             </div>
                         </div>
                     </div>
@@ -655,6 +628,50 @@
             <div style="margin-top: 20px;">
                 <button class="btn btn-primary" onclick="saveProject()">Save Project</button>
                 <button class="btn btn-secondary" onclick="closeProjectModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recurring Transaction Modal -->
+    <div id="recurringModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeRecurringModal()">&times;</span>
+            <h3>Recurring Transaction Options</h3>
+            
+            <div class="form-group">
+                <input type="checkbox" id="modal-is-recurring" onchange="toggleRecurringOptions()">
+                <label for="modal-is-recurring">Make this a recurring transaction</label>
+            </div>
+            
+            <div id="modal-recurring-section" style="display: none;">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Frequency</label>
+                        <select id="modal-frequency">
+                            <option value="daily">Daily</option>
+                            <option value="weekly">Weekly</option>
+                            <option value="biweekly">Bi-weekly</option>
+                            <option value="monthly" selected>Monthly</option>
+                            <option value="quarterly">Quarterly</option>
+                            <option value="yearly">Yearly</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>End Date (Optional)</label>
+                        <input type="date" id="modal-end-date">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Increment Amount (Optional)</label>
+                        <input type="number" step="0.01" id="modal-increment-amount" placeholder="0.00">
+                        <small style="color: #6c757d; font-size: 0.8em;">Amount to increase/decrease each cycle (e.g., 0.01 for 1p increase per day)</small>
+                    </div>
+                </div>
+            </div>
+            
+            <div style="margin-top: 20px;">
+                <button class="btn btn-primary" onclick="closeRecurringModal()">Done</button>
             </div>
         </div>
     </div>

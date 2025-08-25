@@ -91,6 +91,18 @@ const ProjectsComponent = {
             document.getElementById('project-transaction-count').textContent = 
                 currentProjectAnalytics.totals.transaction_count;
             
+            // Calculate and display net spend (total_earned - total_spent)
+            const netSpend = currentProjectAnalytics.totals.total_earned - currentProjectAnalytics.totals.total_spent;
+            const netSpendElement = document.getElementById('project-net-spend');
+            netSpendElement.textContent = `£${netSpend.toFixed(2)}`;
+            
+            // Color the net spend based on whether it's positive or negative
+            if (netSpend >= 0) {
+                netSpendElement.style.color = '#28a745'; // Green for positive (earned more than spent)
+            } else {
+                netSpendElement.style.color = '#dc3545'; // Red for negative (spent more than earned)
+            }
+            
             // Render pie chart
             this.renderCategoryChart();
             
@@ -111,7 +123,7 @@ const ProjectsComponent = {
         let detailsHtml = '';
         
         if (project.category || project.notes) {
-            detailsHtml = '<div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px;">';
+            detailsHtml = '<div style="background: var(--bg-secondary, #f8f9fa); padding: 15px; border-radius: 8px; margin-bottom: 20px;">';
             
             if (project.category) {
                 detailsHtml += `<div style="margin-bottom: 10px;"><strong>Category:</strong> ${project.category}</div>`;

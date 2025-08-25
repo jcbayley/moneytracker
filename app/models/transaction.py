@@ -4,7 +4,7 @@ from ..database import Database
 from . import account
 
 
-def get_filtered(account_id=None, category=None, trans_type=None, date_from=None, date_to=None, limit=100):
+def get_filtered(account_id=None, category=None, trans_type=None, date_from=None, date_to=None, search=None, limit=100):
         """Get transactions with filters."""
         with Database.get_db() as db:
             query = '''
@@ -35,6 +35,16 @@ def get_filtered(account_id=None, category=None, trans_type=None, date_from=None
             if date_to:
                 query += ' AND t.date <= ?'
                 params.append(date_to)
+            
+            if search:
+                search_term = f'%{search}%'
+                query += ''' AND (
+                    t.payee LIKE ? OR 
+                    t.notes LIKE ? OR 
+                    t.category LIKE ? OR 
+                    CAST(t.amount AS TEXT) LIKE ?
+                )'''
+                params.extend([search_term, search_term, search_term, search_term])
             
             query += ' ORDER BY t.date DESC, t.id DESC LIMIT ?'
             params.append(limit)

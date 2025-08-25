@@ -1,5 +1,8 @@
 """Data import/export routes."""
-from flask import Blueprint, request, jsonify
+import os
+import shutil
+from datetime import datetime
+from flask import Blueprint, request, jsonify, current_app
 from ..utils import import_export
 
 data_bp = Blueprint('data', __name__)
@@ -43,3 +46,19 @@ def import_csv():
     file = request.files['file']
     result, status_code = import_export.import_csv(file)
     return jsonify(result), status_code
+
+
+@data_bp.route('/api/export/native', methods=['POST'])
+def export_database_native():
+    """Export database with native file dialog (desktop mode only)."""
+    # For now, disable native dialogs to avoid threading issues
+    # This will be handled by a future improvement using proper Qt integration
+    return jsonify({'error': 'Native dialogs temporarily disabled due to threading issues'}), 400
+
+
+@data_bp.route('/api/export/csv/native', methods=['POST'])
+def export_csv_native():
+    """Export CSV with native file dialog (desktop mode only)."""
+    # For now, disable native dialogs to avoid threading issues
+    # This will be handled by a future improvement using proper Qt integration
+    return jsonify({'error': 'Native dialogs temporarily disabled due to threading issues'}), 400

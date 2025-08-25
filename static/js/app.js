@@ -188,6 +188,7 @@ function closeCategoryModal() {
     ChartManager.closeCategoryModal();
 }
 
+
 // Database functions
 async function getDatabaseInfo() {
     try {
@@ -199,11 +200,149 @@ async function getDatabaseInfo() {
 }
 
 async function exportData() {
-    window.location.href = '/api/export';
+    try {
+        UI.showNotification('Preparing database export...', 'info');
+        
+        // Create a proper download link with better browser support
+        const timestamp = new Date().toISOString().slice(0, 19).replace(/[-:]/g, '').replace('T', '_');
+        const filename = `money_tracker_backup_${timestamp}.db`;
+        
+        // Create and trigger download
+        const link = document.createElement('a');
+        link.href = '/api/export';
+        link.download = filename;
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        UI.showNotification('Database export started! Check your downloads folder.', 'success');
+        
+    } catch (error) {
+        console.error('Export error:', error);
+        UI.showNotification('Export failed: ' + error.message, 'error');
+    }
 }
 
 async function exportCsv() {
-    window.location.href = '/api/export/csv';
+    try {
+        UI.showNotification('Preparing CSV export...', 'info');
+        
+        // Create a proper download link with better browser support
+        const timestamp = new Date().toISOString().slice(0, 19).replace(/[-:]/g, '').replace('T', '_');
+        const filename = `money_tracker_transactions_${timestamp}.csv`;
+        
+        // Create and trigger download
+        const link = document.createElement('a');
+        link.href = '/api/export/csv';
+        link.download = filename;
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        UI.showNotification('CSV export started! Check your downloads folder.', 'success');
+        
+    } catch (error) {
+        console.error('CSV export error:', error);
+        UI.showNotification('CSV export failed: ' + error.message, 'error');
+    }
+}
+
+async function importData() {
+    // Create file input element
+    const fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.accept = '.db,.sqlite,.sqlite3';
+    fileInput.style.display = 'none';
+    
+    fileInput.onchange = async function(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        
+        // Confirm with user since this will replace current data
+        if (!confirm('This will replace your current database. Are you sure? This action cannot be undone.')) {
+            return;
+        }
+        
+        try {
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            UI.showNotification('Importing database...', 'info');
+            
+            const response = await fetch('/api/import', {
+                method: 'POST',
+                body: formData
+            });
+            
+            const result = await response.json();
+            
+            if (response.ok) {
+                UI.showNotification('Database imported successfully! Reloading page...', 'success');
+                // Reload the page to refresh all data
+                setTimeout(() => window.location.reload(), 1500);
+            } else {
+                UI.showNotification(result.error || 'Import failed', 'error');
+            }
+        } catch (error) {
+            console.error('Import error:', error);
+            UI.showNotification('Import failed: ' + error.message, 'error');
+        } finally {
+            // Clean up
+            document.body.removeChild(fileInput);
+        }
+    };
+    
+    // Add to DOM and trigger click
+    document.body.appendChild(fileInput);
+    fileInput.click();
+}
+
+async function importCsv() {
+    // Create file input element
+    const fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.accept = '.csv';
+    fileInput.style.display = 'none';
+    
+    fileInput.onchange = async function(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        
+        try {
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            UI.showNotification('Importing CSV...', 'info');
+            
+            const response = await fetch('/api/import/csv', {
+                method: 'POST',
+                body: formData
+            });
+            
+            const result = await response.json();
+            
+            if (response.ok) {
+                UI.showNotification(`Successfully imported ${result.imported || 0} transactions`, 'success');
+                // Reload transactions to show new data
+                loadTransactions();
+                loadAccounts();
+            } else {
+                UI.showNotification(result.error || 'CSV import failed', 'error');
+            }
+        } catch (error) {
+            console.error('CSV import error:', error);
+            UI.showNotification('CSV import failed: ' + error.message, 'error');
+        } finally {
+            // Clean up
+            document.body.removeChild(fileInput);
+        }
+    };
+    
+    // Add to DOM and trigger click
+    document.body.appendChild(fileInput);
+    fileInput.click();
 }
 
 // Settings functions

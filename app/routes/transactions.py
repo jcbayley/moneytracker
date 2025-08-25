@@ -67,6 +67,7 @@ def transactions():
             trans_type=request.args.get('type'),
             date_from=request.args.get('date_from'),
             date_to=request.args.get('date_to'),
+            search=request.args.get('search'),
             limit=int(request.args.get('limit', 100))
         )
         
