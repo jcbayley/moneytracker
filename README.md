@@ -28,8 +28,20 @@ Frontend html/javascript then run with PyQT and webview in application, or can u
         <img src="docs/transactions.png" alt="Dark Theme" width="400">
       </td>
     </tr>
+    <tr>
+      <td align="center">
+        <b>Analytics Dashboard</b><br>
+        <img src="docs/analytics1.png" alt="Analytics Overview" width="400">
+      </td>
+      <td align="center">
+        <b>Extended Analytics</b><br>
+        <img src="docs/analytics2.png" alt="Extended Analytics" width="400">
+      </td>
+    </tr>
   </table>
 </div>
+
+For more screenshots and detailed views, see the [documentation](docs/screenshots.md).
 
 ## Getting Started
 
