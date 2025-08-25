@@ -1,6 +1,6 @@
 # Money Tracker
 
-A simple personal finance tool to track finances in multiple accounts.
+A simple personal finance tool to track finances in multiple current/savings/investement accounts.
 
 Supports different account types
  - current
@@ -9,10 +9,12 @@ Supports different account types
 
  Has categories for each transactions, these can also be assigned to projects to track how much a project or holiday costs.
 
- All saved to a sqlite database, and is automatically backed up. Can also import and export to a csv.
+ All saved to a sqlite database, and is automatically backed up. Can also import and export to a csv. 
 
 Backend written in python with flask.
 Frontend html/javascript then run with PyQT and webview in application, or can use browser if server is running headless.
+
+**Security Note:** This application stores data unencrypted in a local SQLite database and includes minimal security features. It is designed for personal use on trusted, local systems only. Use at your own discretion.
 
 ## Demo
 
@@ -41,7 +43,7 @@ Frontend html/javascript then run with PyQT and webview in application, or can u
   </table>
 </div>
 
-For more screenshots and detailed views, see the [documentation](docs/screenshots.md).
+For more screenshots and detailed views, see the [documentation](docs/README.md).
 
 ## Getting Started
 
