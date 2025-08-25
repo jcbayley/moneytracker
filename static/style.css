@@ -678,6 +678,12 @@ tr:hover {
     border-color: var(--border-color);
 }
 
+[data-theme="dark"] #model-config-section {
+    background: var(--bg-secondary) !important;
+    border-color: var(--border-color) !important;
+    color: var(--text-primary);
+}
+
 /* Responsive Design */
 @media (max-width: 1200px) {
     .charts-container {
