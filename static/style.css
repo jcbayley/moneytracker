@@ -132,8 +132,28 @@ body {
     cursor: pointer;
     transition: all 0.3s;
     display: flex;
-    justify-content: space-between;
-    align-items: center;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+.account-item-edit {
+    flex-shrink: 0;
+}
+
+.account-item-details {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.account-name {
+    font-weight: 500;
+    font-size: 14px;
+}
+
+.account-amount {
+    font-size: 13px;
 }
 
 .account-item:hover {
@@ -557,6 +577,8 @@ tr:hover {
     background: var(--bg-secondary) !important;
     color: var(--text-primary);
 }
+
+
 
 [data-theme="dark"] .form-group label {
     color: var(--text-secondary);

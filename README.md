@@ -1,146 +1,74 @@
-# 💰 Money Tracker
+# Money Tracker
 
 A simple personal finance tool to track finances in multiple accounts.
 
 Supports different account types
  - current
  - savings
- - investement
+ - investment
 
  Has categories for each transactions, these can also be assigned to projects to track how much a project or holiday costs.
 
- All saved to a sqlite database, and is automaticaly backed up. Can also import and export to a csv.
+ All saved to a sqlite database, and is automatically backed up. Can also import and export to a csv.
 
+Backend written in python with flask.
+Frontend html/javascript then run with PyQT and webview in application, or can use browser if server is running headless.
 
-## 🚀 Getting Started
+## Demo
+
+<div align="center">
+  <table>
+    <tr>
+      <td align="center">
+        <b>Light Theme</b><br>
+        <img src="docs/transactions_light.png" alt="Light Theme" width="400">
+      </td>
+      <td align="center">
+        <b>Dark Theme</b><br>
+        <img src="docs/transactions.png" alt="Dark Theme" width="400">
+      </td>
+    </tr>
+  </table>
+</div>
+
+## Getting Started
 
 ### Prerequisites
 - Python 3.7 or higher
 - pip (Python package installer)
 
-### Installation
+## How to Run
 
-1. **Download app image**
-   download and run app image from release page
+### Option 1: Download AppImage
+Download and run the AppImage from the release page.
 
-Or from source
-
-1. **Clone the repository**:
-   ```bash
-   git clone <repository-url>
-   cd moneyapp
-   ```
-
-2. **Install dependencies**:
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-3. **Run the application**:
-   ```bash
-   python main.py
-   ```
-
-### Running Options
-
-The application supports multiple running modes:
-
-#### Browser Mode 
+### Option 2: Run from Source
 ```bash
-python main.py --mode browser
+git clone <repository-url>
+cd moneyapp
+pip install -r requirements.txt
+python main.py
 ```
-- Opens automatically in your default web browser
-- Accessible at `http://localhost:5000` (or alternative is that is in use)
 
-#### Desktop Window Mode (Default)
+### Option 3: Run Headless with Browser
 ```bash
-python moneytrack.py --mode window
+python main.py --mode headless
 ```
-- Runs as a desktop application 
+Then open your browser and navigate to `http://localhost:5000`
 
-#### Headless Mode
-```bash
-python moneytrack.py --mode headless
-```
-- Access manually at `http://localhost:5000`
-
-
-## 💡 Usage
-
-### Adding Accounts
-1. Click "Add Account" in the sidebar
-2. Choose account type (checking, savings, credit, investment)
-3. Set initial balance if needed
-
-### Recording Transactions
-1. Select the account from the dropdown
-2. Enter amount (positive for income, negative for expenses)
-3. Choose transaction type
-4. Add payee, category, and notes as needed
-5. For transfers, select destination account
-
-### Setting Up Recurring Transactions
-1. Go to the "Recurring" tab
-2. Set up transactions with frequency (daily, weekly, monthly, etc.)
-3. The system will automatically process due recurring transactions
-
-### Importing Data
-1. Go to "Settings" tab
-2. Use "Import CSV" to upload bank transaction files
-3. The system automatically detects transfers and categorizes transactions
-4. Supports common CSV formats from major banks
-
-### Analytics
-1. Visit the "Analytics" tab for financial insights
-2. Use date range filters to analyze specific periods
-3. Click on chart elements for detailed breakdowns
-4. Filter by account types for targeted analysis
-
-## 🗄️ Database Structure
-
-The application uses SQLite with the following main tables:
-- **accounts**: Bank accounts with types and balances
-- **transactions**: All financial transactions
-- **recurring_transactions**: Templates for recurring transactions
-- **payees**: List of transaction payees
-- **categories**: Expense and income categories
-- **Projects**: Groups of transactions for projects
-
-
-
-## 📝 License
+## License
 
 This project is open source and available under the [MIT License](LICENSE).
 
+## Building
 
-## 📦 Standalone Application Packaging
-
-Transform your Money Tracker into standalone applications for easy distribution across platforms.
-
-### Prerequisites for Packaging
+### Build Executable
 ```bash
-pip install pyinstaller
+./scripts/build.sh
 ```
 
-### Build Process
-
-In the scripts directory 
-
-#### 1. Build Executable
+### Build AppImage
 ```bash
-./build.sh
+./scripts/build_appimage.sh
 ```
-Creates a standalone executable in `dist/MoneyTracker`
-
-#### 2. Create AppImage (Linux)
-```bash
-./build_appimage.sh
-```
-Generates `MoneyTracker-x86_64.AppImage` for Linux distribution
-
-### Installation & Usage
-1. **Direct Executable**: `./dist/MoneyTracker`
-2. **AppImage**: `chmod +x MoneyTracker-x86_64.AppImage && ./MoneyTracker-x86_64.AppImage`
-
-All standalone versions include the complete Python runtime and dependencies - no separate Python installation required!
 

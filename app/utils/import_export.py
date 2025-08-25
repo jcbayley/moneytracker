@@ -107,6 +107,41 @@ def export_csv():
             as_attachment=True,
             download_name=filename
         )
+
+
+def generate_csv_content():
+    """Generate CSV content as string (for native file dialog)."""
+    with Database.get_db() as db:
+        transactions = db.execute('''
+            SELECT 
+                a.name as Account,
+                t.date as Date,
+                COALESCE(t.payee, '') as Payee,
+                COALESCE(t.notes, '') as Notes,
+                COALESCE(t.category, '') as Category,
+                t.amount as Amount
+            FROM transactions t
+            JOIN accounts a ON t.account_id = a.id
+            ORDER BY t.date DESC, t.id DESC
+        ''').fetchall()
+    
+    # Create CSV in memory
+    output = io.StringIO()
+    writer = csv.writer(output)
+    
+    # Write header
+    writer.writerow(['Account', 'Date', 'Payee', 'Notes', 'Category', 'Amount'])
+    
+    # Write data
+    for row in transactions:
+        writer.writerow([row['Account'], row['Date'], row['Payee'], 
+                       row['Notes'], row['Category'], row['Amount']])
+    
+    # Return as string
+    csv_content = output.getvalue()
+    output.close()
+    
+    return csv_content
     
 def import_csv(file):
         """Import transactions from CSV format."""
