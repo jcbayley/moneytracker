@@ -19,6 +19,7 @@
             <button class="tab" onclick="switchTab('recurring')">Recurring</button>
             <button class="tab" onclick="switchTab('projects')">Projects</button>
             <button class="tab" onclick="switchTab('analytics')">Analytics</button>
+            <button class="tab" onclick="switchTab('ai-query')">AI Query</button>
             <button class="tab" onclick="switchTab('settings')">Settings</button>
         </div>
 
@@ -275,20 +276,20 @@
                 
                 <div class="stats-grid">
                     <div class="stat-card">
-                        <div style="font-size: 12px; color: #6c757d;">Total Balance</div>
-                        <div style="font-size: 24px; font-weight: bold;" id="total-balance">£0.00</div>
+                        <div style="font-size: calc(var(--base-font-size) * 0.93); color: #6c757d;">Total Balance</div>
+                        <div style="font-size: calc(var(--base-font-size) * 1.71); font-weight: bold;" id="total-balance">£0.00</div>
                     </div>
                     <div class="stat-card">
-                        <div style="font-size: 12px; color: #6c757d;" id="income-label">Period Income</div>
-                        <div style="font-size: 24px; font-weight: bold;" id="monthly-income">£0.00</div>
+                        <div style="font-size: calc(var(--base-font-size) * 0.93); color: #6c757d;" id="income-label">Period Income</div>
+                        <div style="font-size: calc(var(--base-font-size) * 1.71); font-weight: bold;" id="monthly-income">£0.00</div>
                     </div>
                     <div class="stat-card">
-                        <div style="font-size: 12px; color: #6c757d;" id="expense-label">Period Expenses</div>
-                        <div style="font-size: 24px; font-weight: bold;" id="monthly-expenses">£0.00</div>
+                        <div style="font-size: calc(var(--base-font-size) * 0.93); color: #6c757d;" id="expense-label">Period Expenses</div>
+                        <div style="font-size: calc(var(--base-font-size) * 1.71); font-weight: bold;" id="monthly-expenses">£0.00</div>
                     </div>
                     <div class="stat-card">
-                        <div style="font-size: 12px; color: #6c757d;" id="net-label">Net Period</div>
-                        <div style="font-size: 24px; font-weight: bold;" id="net-monthly">£0.00</div>
+                        <div style="font-size: calc(var(--base-font-size) * 0.93); color: #6c757d;" id="net-label">Net Period</div>
+                        <div style="font-size: calc(var(--base-font-size) * 1.71); font-weight: bold;" id="net-monthly">£0.00</div>
                     </div>
                 </div>
                 
@@ -321,6 +322,121 @@
             </div>
         </div>
 
+        <div id="ai-query-tab" class="content hidden">
+            <div class="main-content" style="width: 100%;">
+                <div style="background: white; padding: 20px; border-radius: 10px;">
+                    <h3>🤖 AI Transaction Query</h3>
+                    <p style="color: #6c757d; margin-bottom: 20px;">Ask questions about your transactions in natural language. The AI will search and summarize your financial data.</p>
+                    
+                    <!-- AI Model Configuration Section -->
+                    <div id="model-config-section" style="background: #f8f9fa; border: 1px solid #dee2e6; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                        <h5>AI Model Configuration</h5>
+                        
+                        <!-- Model Type Selection -->
+                        <div style="margin-bottom: 15px;">
+                            <label style="display: block; margin-bottom: 5px;"><strong>Choose AI Model Type:</strong></label>
+                            <div>
+                                <label style="margin-right: 20px;">
+                                    <input type="radio" name="model-type" value="local" id="model-type-local" checked> 
+                                    Local Model (Download Required)
+                                </label>
+                                <label>
+                                    <input type="radio" name="model-type" value="api" id="model-type-api"> 
+                                    External API (Ollama)
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Local Model Section -->
+                        <div id="local-model-section">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                                <div>
+                                    <strong>Local Model Status:</strong> 
+                                    <span id="model-status">Not Downloaded</span>
+                                    <div id="model-info" style="font-size: calc(var(--base-font-size) * 0.93); color: #6c757d; margin-top: 5px;">
+                                        Current: Qwen2.5-3B - High-quality model for financial analysis
+                                    </div>
+                                </div>
+                                <div>
+                                    <button class="btn btn-primary" onclick="downloadModel()" id="download-model-btn">Download Model</button>
+                                    <button class="btn btn-secondary" onclick="checkModelStatus()" id="check-status-btn" style="margin-left: 10px;">Check Status</button>
+                                </div>
+                            </div>
+                            <div id="download-progress" class="hidden" style="margin-top: 15px;">
+                                <div style="background: #e9ecef; border-radius: 4px; overflow: hidden;">
+                                    <div id="progress-bar" style="background: #007bff; height: 20px; width: 0%; transition: width 0.3s;"></div>
+                                </div>
+                                <div id="progress-text" style="text-align: center; margin-top: 5px; font-size: calc(var(--base-font-size) * 0.93);"></div>
+                            </div>
+                        </div>
+
+                        <!-- API Model Section -->
+                        <div id="api-model-section" class="hidden">
+                            <div style="margin-bottom: 10px;">
+                                <label for="api-url" style="display: block; margin-bottom: 5px;"><strong>API URL:</strong></label>
+                                <input type="text" id="api-url" placeholder="http://localhost:11434 (Ollama) or https://api.openai.com/v1" 
+                                       style="width: 100%; padding: 8px; margin-bottom: 10px;">
+                            </div>
+                            <div style="margin-bottom: 10px;">
+                                <label for="api-model" style="display: block; margin-bottom: 5px;"><strong>Model Name:</strong></label>
+                                <input type="text" id="api-model" placeholder="llama3.1:8b (Ollama) or gpt-3.5-turbo (OpenAI)" 
+                                       style="width: 100%; padding: 8px; margin-bottom: 10px;">
+                            </div>
+                            <div style="margin-bottom: 10px;">
+                                <label for="api-key" style="display: block; margin-bottom: 5px;"><strong>API Key (if required):</strong></label>
+                                <input type="password" id="api-key" placeholder="Leave empty for Ollama, required for OpenAI" 
+                                       style="width: 100%; padding: 8px; margin-bottom: 10px;">
+                            </div>
+                            <div>
+                                <button class="btn btn-primary" onclick="testApiConnection()" id="test-api-btn">Test Connection</button>
+                                <button class="btn btn-success" onclick="saveApiConfig()" id="save-api-btn" style="margin-left: 10px;">Save Configuration</button>
+                            </div>
+                            <div id="api-status" style="margin-top: 10px; font-size: calc(var(--base-font-size) * 0.93);"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group" style="margin-bottom: 20px;">
+                        <label for="ai-query-input">Ask a question about your transactions:</label>
+                        <div style="display: flex; gap: 10px; margin-top: 10px;">
+                            <input type="text" id="ai-query-input" placeholder="e.g., 'How much did I spend on food last month?' or 'Show me all transactions over $100'" style="flex: 1; padding: 10px; font-size: calc(var(--base-font-size) * 1.14);">
+                            <button class="btn btn-primary" onclick="submitAIQuery()" id="ai-query-btn">Ask AI</button>
+                        </div>
+                    </div>
+                    
+                    <div id="ai-query-examples" style="margin-bottom: 20px;">
+                        <small style="color: #6c757d;">Example queries:</small>
+                        <div style="margin-top: 5px;">
+                            <button class="btn btn-secondary" style="font-size: calc(var(--base-font-size) * 0.93); padding: 5px 10px; margin: 2px;" onclick="setExampleQuery('How much did I spend on groceries this year?')">Grocery spending</button>
+                            <button class="btn btn-secondary" style="font-size: calc(var(--base-font-size) * 0.93); padding: 5px 10px; margin: 2px;" onclick="setExampleQuery('What are my biggest expenses?')">Biggest expenses</button>
+                            <button class="btn btn-secondary" style="font-size: calc(var(--base-font-size) * 0.93); padding: 5px 10px; margin: 2px;" onclick="setExampleQuery('Show me transactions with Amazon')">Amazon purchases</button>
+                            <button class="btn btn-secondary" style="font-size: calc(var(--base-font-size) * 0.93); padding: 5px 10px; margin: 2px;" onclick="setExampleQuery('How much income did I have last month?')">Monthly income</button>
+                        </div>
+                    </div>
+                    
+                    <div id="ai-loading" class="hidden" style="text-align: center; padding: 20px;">
+                        <div style="font-size: 18px;">🤔 AI is thinking...</div>
+                        <div style="color: #6c757d; margin-top: 10px;">Analyzing your transactions and generating insights...</div>
+                    </div>
+                    
+                    <div id="ai-results" class="hidden" style="margin-top: 20px;">
+                        <h4>AI Response:</h4>
+                        <div id="ai-response" style="background: #f8f9fa; padding: 15px; border-radius: 8px; border-left: 4px solid #007bff; margin: 10px 0;"></div>
+                        
+                        <!-- Database Query Section -->
+                        <div id="ai-query-section" class="hidden" style="margin-top: 20px;">
+                            <h5>Database Query Used:</h5>
+                            <div id="ai-database-query" style="background: #f1f3f4; padding: 12px; border-radius: 6px; font-family: monospace; font-size: 12px; color: #333; white-space: pre-wrap; border-left: 3px solid #28a745; margin: 10px 0;"></div>
+                        </div>
+                        
+                        <div id="ai-data-section" class="hidden" style="margin-top: 20px;">
+                            <h5>Related Transactions:</h5>
+                            <div id="ai-transactions-table" style="max-height: 400px; overflow-y: auto; border: 1px solid #dee2e6; border-radius: 5px;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div id="settings-tab" class="content hidden">
             <div class="main-content" style="width: 100%;">
                 <div style="background: white; padding: 20px; border-radius: 10px;">
@@ -348,6 +464,22 @@
                             Note: Changing database location requires app restart to take effect.
                         </p>
                         <p style="color: #6c757d;" id="db-size">Size: Calculating...</p>
+                    </div>
+                    <div style="margin: 20px 0;">
+                        <h4>Display Settings</h4>
+                        <div class="form-group" style="margin: 15px 0;">
+                            <label>Font Size</label>
+                            <select id="font-size-selector" onchange="UI.changeFontSize()" style="width: 200px;">
+                                <option value="14px">Small (14px)</option>
+                                <option value="16px">Normal (16px)</option>
+                                <option value="18px" selected>Large (18px)</option>
+                                <option value="20px">Extra Large (20px)</option>
+                                <option value="22px">Huge (22px)</option>
+                            </select>
+                        </div>
+                        <p style="color: #6c757d; margin: 10px 0; font-size: 12px;">
+                            Adjust the overall font size of the application for better readability.
+                        </p>
                     </div>
                 </div>
             </div>
@@ -579,6 +711,7 @@
     <script src="/static/js/components/transactions.js"></script>
     <script src="/static/js/components/payees-categories.js"></script>
     <script src="/static/js/components/projects.js"></script>
+    <script src="/static/js/components/ai-query.js"></script>
     
     <!-- Load main application file last -->
     <script src="/static/js/app.js"></script>

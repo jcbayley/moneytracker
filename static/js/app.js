@@ -22,7 +22,8 @@ async function initializeApp() {
             () => loadRecurringTransactions(),
             () => AnalyticsManager.updateAnalytics(),
             () => getDatabaseInfo(),
-            () => loadSettings()
+            () => loadSettings(),
+            () => UI.loadFontSize()
         ];
         
         // Load each with error handling - won't crash if one fails
@@ -99,7 +100,7 @@ async function loadRecurringTransactions() {
 
         list.innerHTML = '';
         if (recurring.length === 0) {
-            list.innerHTML = '<p style="color: #6c757d;">No recurring transactions set up yet.</p>';
+            list.innerHTML = '<p style="color: #6c757d; font-size: var(--base-font-size);">No recurring transactions set up yet.</p>';
             return;
         }
 
@@ -111,13 +112,13 @@ async function loadRecurringTransactions() {
             
             div.innerHTML = `
                 <div>
-                    <strong>${r.payee || 'Transaction'}</strong> - ${r.account_name}
+                    <strong style="font-size: calc(var(--base-font-size) * 1.14);">${r.payee || 'Transaction'}</strong><span style="font-size: var(--base-font-size);"> - ${r.account_name}</span>
                     <br>
-                    <small>${r.frequency} | ${r.category || 'No category'} | Next: ${r.next_date}${r.increment_amount ? ` | Inc: ${r.increment_amount > 0 ? '+' : ''}£${r.increment_amount.toFixed(2)}` : ''}</small>
+                    <small style="font-size: calc(var(--base-font-size) * 0.93);">${r.frequency} | ${r.category || 'No category'} | Next: ${r.next_date}${r.increment_amount ? ` | Inc: ${r.increment_amount > 0 ? '+' : ''}£${r.increment_amount.toFixed(2)}` : ''}</small>
                 </div>
                 <div>
                     ${amountElement.outerHTML}
-                    <button class="btn btn-danger" style="margin-left: 10px; padding: 5px 10px; font-size: 12px;" 
+                    <button class="btn btn-danger" style="margin-left: 10px; padding: 5px 10px; font-size: calc(var(--base-font-size) * 0.93);" 
                             onclick="deleteRecurring(${r.id})">Delete</button>
                 </div>
             `;

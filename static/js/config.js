@@ -106,6 +106,13 @@ Config.get = function(path, defaultValue = null) {
     return current;
 };
 
+// Dynamic font size for charts based on current base font size
+Config.getChartFontSize = function() {
+    const baseFontSize = getComputedStyle(document.documentElement).getPropertyValue('--base-font-size');
+    const baseSize = parseInt(baseFontSize) || 18; // fallback to 18px if not found
+    return Math.round(baseSize * 0.93); // Slightly smaller than base for better chart readability
+};
+
 // Examples of how to use Config.get():
 // Config.get('API.BASE_URL') returns '/api'
 // Config.get('CHARTS.COLORS.0') returns '#FF6384'

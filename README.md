@@ -9,6 +9,8 @@ Supports different account types
 
  Has categories for each transactions, these can also be assigned to projects to track how much a project or holiday costs.
 
+ Includes AI-powered transaction querying to analyze spending patterns and get insights about your financial data.
+
  All saved to a sqlite database, and is automatically backed up. Can also import and export to a csv. 
 
 Backend written in python with flask.
@@ -38,6 +40,16 @@ Frontend html/javascript then run with PyQT and webview in application, or can u
       <td align="center">
         <b>Extended Analytics</b><br>
         <img src="docs/analytics2.png" alt="Extended Analytics" width="400">
+      </td>
+    </tr>
+    <tr>
+      <td align="center">
+        <b>AI Query Interface</b><br>
+        <img src="docs/ai-query.png" alt="AI Query Interface" width="400">
+      </td>
+      <td align="center">
+        <b>AI Query Response</b><br>
+        <img src="docs/ai-query-return.png" alt="AI Query Response" width="400">
       </td>
     </tr>
   </table>
