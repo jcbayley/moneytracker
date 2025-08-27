@@ -70,7 +70,7 @@ Download and run the AppImage from the release page.
 
 ### Option 2: Run from Source
 ```bash
-git clone <repository-url>
+git clone https://github.com/jcbayley/moneytracker
 cd moneyapp
 pip install -r requirements.txt
 python main.py
