@@ -197,5 +197,39 @@ const UI = {
         });
 
         return tr;
+    },
+
+    /**
+     * Font size management
+     */
+    changeFontSize() {
+        const selector = document.getElementById('font-size-selector');
+        const fontSize = selector.value;
+        document.documentElement.style.setProperty('--base-font-size', fontSize);
+        
+        // Save to localStorage
+        localStorage.setItem('app-font-size', fontSize);
+        
+        // Update charts with new font size if ChartManager is available
+        if (typeof ChartManager !== 'undefined' && ChartManager.updateAllCharts) {
+            // Small delay to ensure CSS variable is updated
+            setTimeout(() => {
+                ChartManager.updateAllCharts();
+            }, 100);
+        }
+    },
+
+    /**
+     * Load saved font size
+     */
+    loadFontSize() {
+        const savedFontSize = localStorage.getItem('app-font-size');
+        if (savedFontSize) {
+            document.documentElement.style.setProperty('--base-font-size', savedFontSize);
+            const selector = document.getElementById('font-size-selector');
+            if (selector) {
+                selector.value = savedFontSize;
+            }
+        }
     }
 };

@@ -16,8 +16,8 @@ Management interface for recurring transactions including salary, utilities, and
 ![Projects Management](projects.png)
 Project management interface showing various financial projects like Car Maintenance, Emergency Fund, Home Renovation, Stock Investment, and Vacation Planning with their respective balances and transaction counts.
 
-![Car Maintenance Project](carmaintainence.png)
-Detailed view of the Car Maintenance project showing spending breakdown, total spent, and associated transactions filtered by category.
+![Vacation Project Details](projects-vacation.png)
+Detailed view of a Vacation project showing comprehensive spending breakdown, budget tracking, and all associated transactions with analytics.
 
 ## Analytics Tab
 
@@ -29,6 +29,19 @@ Additional analytics view displaying cash flow analysis and top 10 payees, along
 
 ![Extended Analytics](analytics-transactions.png) 
 By clicking on any category in the pie or bar charts, one can see the expenses in that category for that period or month.
+
+## AI Query Tab
+
+![AI Query Interface](ai-query.png)
+AI-powered transaction querying interface with natural language support. Users can ask questions about their spending patterns, with example queries and model configuration options for both local and external AI models.
+
+![AI Query Response](ai-query-return.png)
+Example AI response showing detailed analysis of spending patterns with both natural language explanations and the underlying database queries used to generate the insights.
+
+## Transaction Filtering
+
+![Filtered Transactions](filtered-transactions.png)
+Advanced transaction filtering capabilities showing filtered results with search functionality and category-based filtering options.
 
 ## Settings Tab
 

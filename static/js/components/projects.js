@@ -30,7 +30,7 @@ const ProjectsComponent = {
         list.innerHTML = '';
         
         if (projects.length === 0) {
-            list.innerHTML = '<p style="color: #6c757d;">No projects created yet.</p>';
+            list.innerHTML = '<p style="color: #6c757d; font-size: var(--base-font-size);">No projects created yet.</p>';
             return;
         }
         
@@ -45,19 +45,19 @@ const ProjectsComponent = {
                 <div onclick="showProjectAnalytics(${project.id})" style="cursor: pointer; flex: 1;">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
                         <div>
-                            <strong style="font-size: 16px;">${project.name}</strong>
-                            ${project.description ? `<br><small style="color: #6c757d;">${project.description}</small>` : ''}
+                            <strong style="font-size: calc(var(--base-font-size) * 1.14);">${project.name}</strong>
+                            ${project.description ? `<br><small style="color: #6c757d; font-size: calc(var(--base-font-size) * 0.93);">${project.description}</small>` : ''}
                         </div>
                         <div style="text-align: right;">
                             ${spentElement.outerHTML}
-                            <br><small style="color: #6c757d;">${project.transaction_count} transactions</small>
+                            <br><small style="color: #6c757d; font-size: calc(var(--base-font-size) * 0.93);">${project.transaction_count} transactions</small>
                         </div>
                     </div>
                 </div>
                 <div style="margin-left: 15px;">
-                    <button class="btn btn-secondary" style="padding: 5px 10px; font-size: 12px; margin-right: 5px;" 
+                    <button class="btn btn-secondary" style="padding: 5px 10px; font-size: calc(var(--base-font-size) * 0.93); margin-right: 5px;" 
                             onclick="editProject(${project.id})">Edit</button>
-                    <button class="btn btn-danger" style="padding: 5px 10px; font-size: 12px;" 
+                    <button class="btn btn-danger" style="padding: 5px 10px; font-size: calc(var(--base-font-size) * 0.93);" 
                             onclick="deleteProject(${project.id})">Delete</button>
                 </div>
             `;

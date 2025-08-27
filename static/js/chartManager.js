@@ -85,7 +85,7 @@ const ChartManager = {
                 legend: {
                     position: 'bottom',
                     labels: {
-                        font: { size: Config.get('CHARTS.DEFAULT_FONT_SIZE') },
+                        font: { size: Config.getChartFontSize() },
                         boxWidth: 12
                     }
                 }
@@ -118,17 +118,17 @@ const ChartManager = {
             maintainAspectRatio: Config.get('CHARTS.MAINTAIN_ASPECT_RATIO'),
             scales: { 
                 x: {
-                    ticks: { font: { size: Config.get('CHARTS.DEFAULT_FONT_SIZE') } }
+                    ticks: { font: { size: Config.getChartFontSize() } }
                 },
                 y: { 
                     beginAtZero: true,
-                    ticks: { font: { size: Config.get('CHARTS.DEFAULT_FONT_SIZE') } }
+                    ticks: { font: { size: Config.getChartFontSize() } }
                 }
             },
             plugins: {
                 legend: {
                     position: 'bottom',
-                    labels: { font: { size: Config.get('CHARTS.DEFAULT_FONT_SIZE') } }
+                    labels: { font: { size: Config.getChartFontSize() } }
                 }
             }
         };
@@ -159,17 +159,17 @@ const ChartManager = {
             maintainAspectRatio: Config.get('CHARTS.MAINTAIN_ASPECT_RATIO'),
             scales: { 
                 x: {
-                    ticks: { font: { size: Config.get('CHARTS.DEFAULT_FONT_SIZE') } }
+                    ticks: { font: { size: Config.getChartFontSize() } }
                 },
                 y: { 
                     beginAtZero: true,
-                    ticks: { font: { size: Config.get('CHARTS.DEFAULT_FONT_SIZE') } }
+                    ticks: { font: { size: Config.getChartFontSize() } }
                 }
             },
             plugins: {
                 legend: {
                     position: 'bottom',
-                    labels: { font: { size: Config.get('CHARTS.DEFAULT_FONT_SIZE') } }
+                    labels: { font: { size: Config.getChartFontSize() } }
                 }
             }
         };
@@ -256,13 +256,13 @@ const ChartManager = {
             scales: { 
                 x: { 
                     stacked: true,
-                    ticks: { font: { size: Config.get('CHARTS.DEFAULT_FONT_SIZE') } }
+                    ticks: { font: { size: Config.getChartFontSize() } }
                 },
                 y: { 
                     stacked: true,
                     beginAtZero: true,
                     position: 'left',
-                    ticks: { font: { size: Config.get('CHARTS.DEFAULT_FONT_SIZE') } },
+                    ticks: { font: { size: Config.getChartFontSize() } },
                     title: {
                         display: true,
                         text: 'Spending (£)'
@@ -272,7 +272,7 @@ const ChartManager = {
                     type: 'linear',
                     position: 'right',
                     beginAtZero: true,
-                    ticks: { font: { size: Config.get('CHARTS.DEFAULT_FONT_SIZE') } },
+                    ticks: { font: { size: Config.getChartFontSize() } },
                     title: {
                         display: true,
                         text: 'Income (£)'
@@ -286,7 +286,7 @@ const ChartManager = {
                 legend: {
                     display: true,
                     position: 'bottom',
-                    labels: { font: { size: Config.get('CHARTS.DEFAULT_FONT_SIZE') } }
+                    labels: { font: { size: Config.getChartFontSize() } }
                 },
                 tooltip: {
                     callbacks: {
@@ -625,13 +625,13 @@ const ChartManager = {
             scales: { 
                 x: { 
                     stacked: true,
-                    ticks: { font: { size: Config.get('CHARTS.DEFAULT_FONT_SIZE') } }
+                    ticks: { font: { size: Config.getChartFontSize() } }
                 },
                 y: { 
                     stacked: true,
                     beginAtZero: true,
                     position: 'left',
-                    ticks: { font: { size: Config.get('CHARTS.DEFAULT_FONT_SIZE') } },
+                    ticks: { font: { size: Config.getChartFontSize() } },
                     title: {
                         display: true,
                         text: 'Net Flow (£)'
@@ -641,7 +641,7 @@ const ChartManager = {
                     type: 'linear',
                     position: 'right',
                     beginAtZero: true,
-                    ticks: { font: { size: Config.get('CHARTS.DEFAULT_FONT_SIZE') } },
+                    ticks: { font: { size: Config.getChartFontSize() } },
                     title: {
                         display: true,
                         text: 'Income (£)'
@@ -655,7 +655,7 @@ const ChartManager = {
                 legend: {
                     display: true,
                     position: 'bottom',
-                    labels: { font: { size: Config.get('CHARTS.DEFAULT_FONT_SIZE') } }
+                    labels: { font: { size: Config.getChartFontSize() } }
                 }
             }
         };

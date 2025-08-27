@@ -276,20 +276,20 @@
                 
                 <div class="stats-grid">
                     <div class="stat-card">
-                        <div style="font-size: 12px; color: #6c757d;">Total Balance</div>
-                        <div style="font-size: 24px; font-weight: bold;" id="total-balance">£0.00</div>
+                        <div style="font-size: calc(var(--base-font-size) * 0.93); color: #6c757d;">Total Balance</div>
+                        <div style="font-size: calc(var(--base-font-size) * 1.71); font-weight: bold;" id="total-balance">£0.00</div>
                     </div>
                     <div class="stat-card">
-                        <div style="font-size: 12px; color: #6c757d;" id="income-label">Period Income</div>
-                        <div style="font-size: 24px; font-weight: bold;" id="monthly-income">£0.00</div>
+                        <div style="font-size: calc(var(--base-font-size) * 0.93); color: #6c757d;" id="income-label">Period Income</div>
+                        <div style="font-size: calc(var(--base-font-size) * 1.71); font-weight: bold;" id="monthly-income">£0.00</div>
                     </div>
                     <div class="stat-card">
-                        <div style="font-size: 12px; color: #6c757d;" id="expense-label">Period Expenses</div>
-                        <div style="font-size: 24px; font-weight: bold;" id="monthly-expenses">£0.00</div>
+                        <div style="font-size: calc(var(--base-font-size) * 0.93); color: #6c757d;" id="expense-label">Period Expenses</div>
+                        <div style="font-size: calc(var(--base-font-size) * 1.71); font-weight: bold;" id="monthly-expenses">£0.00</div>
                     </div>
                     <div class="stat-card">
-                        <div style="font-size: 12px; color: #6c757d;" id="net-label">Net Period</div>
-                        <div style="font-size: 24px; font-weight: bold;" id="net-monthly">£0.00</div>
+                        <div style="font-size: calc(var(--base-font-size) * 0.93); color: #6c757d;" id="net-label">Net Period</div>
+                        <div style="font-size: calc(var(--base-font-size) * 1.71); font-weight: bold;" id="net-monthly">£0.00</div>
                     </div>
                 </div>
                 
@@ -353,7 +353,7 @@
                                 <div>
                                     <strong>Local Model Status:</strong> 
                                     <span id="model-status">Not Downloaded</span>
-                                    <div id="model-info" style="font-size: 12px; color: #6c757d; margin-top: 5px;">
+                                    <div id="model-info" style="font-size: calc(var(--base-font-size) * 0.93); color: #6c757d; margin-top: 5px;">
                                         Current: Qwen2.5-3B - High-quality model for financial analysis
                                     </div>
                                 </div>
@@ -366,7 +366,7 @@
                                 <div style="background: #e9ecef; border-radius: 4px; overflow: hidden;">
                                     <div id="progress-bar" style="background: #007bff; height: 20px; width: 0%; transition: width 0.3s;"></div>
                                 </div>
-                                <div id="progress-text" style="text-align: center; margin-top: 5px; font-size: 12px;"></div>
+                                <div id="progress-text" style="text-align: center; margin-top: 5px; font-size: calc(var(--base-font-size) * 0.93);"></div>
                             </div>
                         </div>
 
@@ -391,14 +391,14 @@
                                 <button class="btn btn-primary" onclick="testApiConnection()" id="test-api-btn">Test Connection</button>
                                 <button class="btn btn-success" onclick="saveApiConfig()" id="save-api-btn" style="margin-left: 10px;">Save Configuration</button>
                             </div>
-                            <div id="api-status" style="margin-top: 10px; font-size: 12px;"></div>
+                            <div id="api-status" style="margin-top: 10px; font-size: calc(var(--base-font-size) * 0.93);"></div>
                         </div>
                     </div>
                     
                     <div class="form-group" style="margin-bottom: 20px;">
                         <label for="ai-query-input">Ask a question about your transactions:</label>
                         <div style="display: flex; gap: 10px; margin-top: 10px;">
-                            <input type="text" id="ai-query-input" placeholder="e.g., 'How much did I spend on food last month?' or 'Show me all transactions over $100'" style="flex: 1; padding: 10px; font-size: 16px;">
+                            <input type="text" id="ai-query-input" placeholder="e.g., 'How much did I spend on food last month?' or 'Show me all transactions over $100'" style="flex: 1; padding: 10px; font-size: calc(var(--base-font-size) * 1.14);">
                             <button class="btn btn-primary" onclick="submitAIQuery()" id="ai-query-btn">Ask AI</button>
                         </div>
                     </div>
@@ -406,10 +406,10 @@
                     <div id="ai-query-examples" style="margin-bottom: 20px;">
                         <small style="color: #6c757d;">Example queries:</small>
                         <div style="margin-top: 5px;">
-                            <button class="btn btn-secondary" style="font-size: 12px; padding: 5px 10px; margin: 2px;" onclick="setExampleQuery('How much did I spend on groceries this year?')">Grocery spending</button>
-                            <button class="btn btn-secondary" style="font-size: 12px; padding: 5px 10px; margin: 2px;" onclick="setExampleQuery('What are my biggest expenses?')">Biggest expenses</button>
-                            <button class="btn btn-secondary" style="font-size: 12px; padding: 5px 10px; margin: 2px;" onclick="setExampleQuery('Show me transactions with Amazon')">Amazon purchases</button>
-                            <button class="btn btn-secondary" style="font-size: 12px; padding: 5px 10px; margin: 2px;" onclick="setExampleQuery('How much income did I have last month?')">Monthly income</button>
+                            <button class="btn btn-secondary" style="font-size: calc(var(--base-font-size) * 0.93); padding: 5px 10px; margin: 2px;" onclick="setExampleQuery('How much did I spend on groceries this year?')">Grocery spending</button>
+                            <button class="btn btn-secondary" style="font-size: calc(var(--base-font-size) * 0.93); padding: 5px 10px; margin: 2px;" onclick="setExampleQuery('What are my biggest expenses?')">Biggest expenses</button>
+                            <button class="btn btn-secondary" style="font-size: calc(var(--base-font-size) * 0.93); padding: 5px 10px; margin: 2px;" onclick="setExampleQuery('Show me transactions with Amazon')">Amazon purchases</button>
+                            <button class="btn btn-secondary" style="font-size: calc(var(--base-font-size) * 0.93); padding: 5px 10px; margin: 2px;" onclick="setExampleQuery('How much income did I have last month?')">Monthly income</button>
                         </div>
                     </div>
                     
@@ -464,6 +464,22 @@
                             Note: Changing database location requires app restart to take effect.
                         </p>
                         <p style="color: #6c757d;" id="db-size">Size: Calculating...</p>
+                    </div>
+                    <div style="margin: 20px 0;">
+                        <h4>Display Settings</h4>
+                        <div class="form-group" style="margin: 15px 0;">
+                            <label>Font Size</label>
+                            <select id="font-size-selector" onchange="UI.changeFontSize()" style="width: 200px;">
+                                <option value="14px">Small (14px)</option>
+                                <option value="16px">Normal (16px)</option>
+                                <option value="18px" selected>Large (18px)</option>
+                                <option value="20px">Extra Large (20px)</option>
+                                <option value="22px">Huge (22px)</option>
+                            </select>
+                        </div>
+                        <p style="color: #6c757d; margin: 10px 0; font-size: 12px;">
+                            Adjust the overall font size of the application for better readability.
+                        </p>
                     </div>
                 </div>
             </div>
