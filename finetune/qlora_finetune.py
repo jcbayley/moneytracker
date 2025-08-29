@@ -1,9 +1,4 @@
 #!/usr/bin/env python3
-"""
-Cross-Platform LoRA Fine-tuning Script
-Supports quantization (if available), MPS (Apple Silicon), and CPU fallback
-"""
-
 import torch
 import platform
 import sys
@@ -128,6 +123,9 @@ def setup_model_and_tokenizer(model_name: str, lora_rank: int = 16, use_quantiza
         target_modules = ["q_proj", "k_proj", "v_proj", "dense"]
     elif "qwen" in model_name.lower():
         target_modules = ["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"]
+    elif "smollm" in model_name.lower():
+        # SmolLM uses Llama-style architecture
+        target_modules = ["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"]
     else:
         # Mistral/Llama style models
         target_modules = ["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"]
@@ -188,8 +186,8 @@ def load_and_tokenize_data(data_path: str, tokenizer, max_length: int = 512):
 
 def main():
     parser = argparse.ArgumentParser(description='Cross-Platform LoRA Fine-tuning')
-    parser.add_argument('--model', type=str, default='microsoft/phi-2',
-                       help='Model name (default: microsoft/phi-2)')
+    parser.add_argument('--model', type=str, default='HuggingFaceTB/SmolLM-360M',
+                       help='Model name (default: HuggingFaceTB/SmolLM-360M)')
     parser.add_argument('--data', type=str, required=True,
                        help='Path to training data (JSONL format)')
     parser.add_argument('--output', type=str, default='./lora-output',
@@ -323,14 +321,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-# Example usage:
-# 
-# CPU-only (works everywhere):
-# python qlora_finetune_fallback.py --data training_data.jsonl --cpu-only --batch-size 1 --rank 8
-#
-# With GPU (if available):
-# python qlora_finetune_fallback.py --data training_data.jsonl --quantize --batch-size 2
-#
-# Apple Silicon MPS:
-# python qlora_finetune_fallback.py --data training_data.jsonl --batch-size 2 --rank 16
