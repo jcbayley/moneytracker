@@ -91,7 +91,11 @@ fi
 
 # Create AppImage
 print_status "Building AppImage..."
-ARCH=x86_64 ./appimagetool-x86_64.AppImage MoneyTracker.AppDir MoneyTracker-x86_64.AppImage
+# Try running appimagetool normally first, then with --appimage-extract-and-run if FUSE fails
+if ! ARCH=x86_64 ./appimagetool-x86_64.AppImage MoneyTracker.AppDir MoneyTracker-x86_64.AppImage 2>/dev/null; then
+    print_status "FUSE not available, using --appimage-extract-and-run..."
+    ARCH=x86_64 ./appimagetool-x86_64.AppImage --appimage-extract-and-run MoneyTracker.AppDir MoneyTracker-x86_64.AppImage
+fi
 
 if [ -f "MoneyTracker-x86_64.AppImage" ]; then
     print_success "✅ AppImage created successfully!"
