@@ -349,17 +349,60 @@
 
                         <!-- Local Model Section -->
                         <div id="local-model-section">
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                                <div>
-                                    <strong>Local Model Status:</strong> 
-                                    <span id="model-status">Not Downloaded</span>
-                                    <div id="model-info" style="font-size: calc(var(--base-font-size) * 0.93); color: #6c757d; margin-top: 5px;">
-                                        Current: Qwen2.5-3B - High-quality model for financial analysis
+                            <!-- Model Source Selection -->
+                            <div style="margin-bottom: 15px;">
+                                <label style="display: block; margin-bottom: 8px;"><strong>Model Source:</strong></label>
+                                <div style="margin-bottom: 10px;">
+                                    <label style="display: inline-flex; align-items: center; margin-right: 20px;">
+                                        <input type="radio" name="model-source" value="download" id="model-source-download" checked style="margin-right: 5px;">
+                                        Download from Hugging Face
+                                    </label>
+                                    <label style="display: inline-flex; align-items: center;">
+                                        <input type="radio" name="model-source" value="local-path" id="model-source-local" style="margin-right: 5px;">
+                                        Use Local Pretrained Model
+                                    </label>
+                                </div>
+                            </div>
+
+                            <!-- Download Model Section -->
+                            <div id="download-model-config">
+                                <div style="margin-bottom: 10px;">
+                                    <label for="model-name-input" style="display: block; margin-bottom: 5px;"><strong>Model Name:</strong></label>
+                                    <input type="text" id="model-name-input" value="Qwen/Qwen2.5-3B" 
+                                           placeholder="e.g., Qwen/Qwen2.5-0.5B-Instruct, microsoft/DialoGPT-medium"
+                                           style="width: 100%; padding: 8px; margin-bottom: 5px;">
+                                    <small style="color: #6c757d;">Default: Qwen/Qwen2.5-3B - High-quality model for financial analysis</small>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                                    <div>
+                                        <strong>Download Status:</strong> 
+                                        <span id="model-status">Not Downloaded</span>
+                                    </div>
+                                    <div>
+                                        <button class="btn btn-primary" onclick="downloadModel()" id="download-model-btn">Download Model</button>
+                                        <button class="btn btn-secondary" onclick="checkModelStatus()" id="check-status-btn" style="margin-left: 10px;">Check Status</button>
                                     </div>
                                 </div>
-                                <div>
-                                    <button class="btn btn-primary" onclick="downloadModel()" id="download-model-btn">Download Model</button>
-                                    <button class="btn btn-secondary" onclick="checkModelStatus()" id="check-status-btn" style="margin-left: 10px;">Check Status</button>
+                            </div>
+
+                            <!-- Local Path Model Section -->
+                            <div id="local-path-model-config" class="hidden">
+                                <div style="margin-bottom: 10px;">
+                                    <label for="local-model-path" style="display: block; margin-bottom: 5px;"><strong>Local Model Path:</strong></label>
+                                    <input type="text" id="local-model-path" 
+                                           placeholder="/path/to/your/fine-tuned-model"
+                                           style="width: 100%; padding: 8px; margin-bottom: 5px;">
+                                    <small style="color: #6c757d;">Path to directory containing your pretrained model files (config.json, model files, tokenizer files)</small>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                                    <div>
+                                        <strong>Model Status:</strong> 
+                                        <span id="local-model-status">Not Configured</span>
+                                    </div>
+                                    <div>
+                                        <button class="btn btn-success" onclick="saveLocalModelConfig()" id="save-local-model-btn">Save & Load Model</button>
+                                        <button class="btn btn-secondary" onclick="checkLocalModelStatus()" id="check-local-status-btn" style="margin-left: 10px;">Check Status</button>
+                                    </div>
                                 </div>
                             </div>
                             <div id="download-progress" class="hidden" style="margin-top: 15px;">

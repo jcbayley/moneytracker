@@ -11,11 +11,12 @@ class AIQueryService:
     """Service for processing AI queries about transactions."""
     
     def __init__(self):
-        #self.model_name = "Qwen/Qwen2.5-0.5B-Instruct"
-        self.model_name = "Qwen/Qwen2.5-3B"
+        # Default model configuration
+        self.default_model_name = "Qwen/Qwen2.5-3B"
         self.model_dir = os.path.expanduser("~/.local/share/MoneyTracker/models")
-        self.model_path = os.path.join(self.model_dir, "Qwen2.5-3B")
         self.model = None
+        self.tokenizer = None
+        self.pipeline = None
         self.sampling_params = None
         self._db_context_cache = None  # Cache for database context
         self._config = None  # AI configuration
@@ -26,26 +27,43 @@ class AIQueryService:
         if self._config.get('type') == 'local':
             self._load_model()
     
+    def _get_model_path(self):
+        """Get the model path based on configuration."""
+        if self._config.get('model_source') == 'local-path':
+            return self._config.get('local_model_path', '')
+        else:
+            # Default download behavior
+            model_name = self._config.get('model_name', self.default_model_name)
+            # Create safe directory name from model name
+            safe_name = model_name.replace('/', '_').replace(':', '_')
+            return os.path.join(self.model_dir, safe_name)
+
     def _load_model(self):
         """Load the AI model if available."""
-        if not os.path.exists(self.model_path):
-            print(f"AI model not found. Download required.")
+        model_path = self._get_model_path()
+        
+        if not model_path:
+            print("No model path configured.")
+            return
+            
+        if not os.path.exists(model_path):
+            print(f"AI model not found at {model_path}. Download or configuration required.")
             return
             
         try:
-            print("Loading AI model with transformers (CPU)...")
+            print(f"Loading AI model from {model_path} with transformers (CPU)...")
             
             from transformers import AutoTokenizer, AutoModelForCausalLM, pipeline
             import torch
             
             # Load tokenizer and model
             self.tokenizer = AutoTokenizer.from_pretrained(
-                self.model_path,
+                model_path,
                 trust_remote_code=True
             )
             
             self.model = AutoModelForCausalLM.from_pretrained(
-                self.model_path,
+                model_path,
                 torch_dtype=torch.float32,
                 device_map="cpu",
                 trust_remote_code=True,
@@ -68,6 +86,8 @@ class AIQueryService:
         except Exception as e:
             print(f"Transformers loading failed: {e}")
             self.model = None
+            self.tokenizer = None
+            self.pipeline = None
     
     def _load_config(self):
         """Load AI configuration."""
@@ -77,10 +97,32 @@ class AIQueryService:
                 with open(config_path, 'r') as f:
                     self._config = json.load(f)
             else:
-                self._config = {'type': 'local'}
+                self._config = {
+                    'type': 'local',
+                    'model_source': 'download',
+                    'model_name': self.default_model_name
+                }
         except Exception as e:
             print(f"Failed to load AI config: {e}")
-            self._config = {'type': 'local'}
+            self._config = {
+                'type': 'local',
+                'model_source': 'download',
+                'model_name': self.default_model_name
+            }
+
+    def reload_model(self):
+        """Reload model after configuration change."""
+        # Clear existing model
+        self.model = None
+        self.tokenizer = None
+        self.pipeline = None
+        
+        # Reload configuration
+        self._load_config()
+        
+        # Load model if local type
+        if self._config.get('type') == 'local':
+            self._load_model()
 
     def _call_llm(self, prompt):
         """Call the AI model (local or API)."""
@@ -172,12 +214,9 @@ class AIQueryService:
             'query_params': query_info.get('params', [])
         }
     
-    def _analyze_query(self, query):
-        """Analyze user query using AI with database context."""
-        # Get available categories and payees from database
-        db_context = self._get_database_context()
-        
-        prompt = f"""Parse financial query to JSON for sql search:
+    def _create_analysis_prompt(self, query, db_context):
+        """Create the analysis prompt for query parsing."""
+        return f"""Parse financial query to JSON for sql search:
 Query: "{query}"
 
 Categories: {', '.join(db_context['categories'][:10])}
@@ -193,54 +232,135 @@ RULES:
   - "income/earned/salary/revenue/received" → "income" 
   - "transfer" → "transfer"
 
-Return JSON:
+EXAMPLES:
+Input: "How much did I spend on groceries last month?"
+Output: {{"intent": "sum", "time_period": "last_month", "categories": ["Groceries"], "transaction_type": "expense"}}
+
+Input: "Show me Tesco payments"
+Output: {{"intent": "search", "payees": ["Tesco"]}}
+
+Input: "What did I earn this month?"
+Output: {{"intent": "sum", "time_period": "this_month", "transaction_type": "income"}}
+
+Return one JSON:
 {{
   "intent": "search|sum|top|average|count",
   "time_period": "today|yesterday|last_week|this_month|last_month|this_year|last_year" or null,
   "custom_date": "YYYY-MM-DD or YYYY-MM or specific date string" or null,
-  "categories": ["only if explicitly mentioned"],
-  "payees": ["only if explicitly mentioned"],
+  "categories": [""],
+  "payees": [""],
   "transaction_type": "income|expense|transfer" or null
-}}"""
+}}
+
+Response: """
+    
+    def _create_summary_prompt(self, user_query, count, total, top_transactions):
+        """Create the summary prompt for natural language response."""
+        top_tx_context = []
+        for tx in top_transactions:
+            top_tx_context.append(f"£{abs(tx['amount']):.2f} to {tx['payee'] or 'Unknown'} on {tx['date']}")
         
+        return f"""Answer user's financial question:
+Question: "{user_query}"
+Found {count} transactions, total £{total:.2f}
+Top amounts: {'; '.join(top_tx_context[:2])}
+
+EXAMPLES:
+Question: "How much did I spend on groceries?"
+Found 12 transactions, total £234.56
+Answer: You spent £234.56 across 12 transactions.
+
+Question: "What's my biggest expense this month?"
+Found 5 transactions, total £1,250.00, Top: £450.00 to Rent on 2024-01-01
+Answer: Your largest expense was £450.00 to Rent on 2024-01-01.
+
+Question: "Show me Netflix payments"
+Found 3 transactions, total £35.97
+Answer: Found 3 transactions totaling £35.97.
+
+Provide short direct answer:"""
+    
+    @staticmethod
+    def extract_json_from_response(response):
+        """Extract and parse JSON from model response - returns the LAST valid JSON."""
+        import re
+        
+        # Find all complete JSON objects and return the last valid one
+        json_objects = []
+        brace_count = 0
+        json_start = -1
+        
+        for i, char in enumerate(response):
+            if char == '{':
+                if brace_count == 0:
+                    json_start = i
+                brace_count += 1
+            elif char == '}':
+                brace_count -= 1
+                if brace_count == 0 and json_start >= 0:
+                    # Found a complete JSON object
+                    json_str = response[json_start:i+1]
+                    try:
+                        json_obj = json.loads(json_str)
+                        json_objects.append(json_obj)  # Collect all valid JSONs
+                    except json.JSONDecodeError:
+                        # Try cleaning up the JSON
+                        try:
+                            clean_json = re.sub(r'([{,]\s*)(\w+):', r'\1"\2":', json_str)
+                            clean_json = re.sub(r':\s*([^",\[\]{}]+)([,}])', r': "\1"\2', clean_json)
+                            json_obj = json.loads(clean_json)
+                            json_objects.append(json_obj)
+                        except:
+                            pass
+                    json_start = -1
+        
+        # Return the LAST valid JSON object
+        if json_objects:
+            return json_objects[-1]
+        
+        # Fallback: extract intent manually
+        intent_match = re.search(r'intent["\']?\s*:\s*["\']?(\w+)["\']?', response, re.IGNORECASE)
+        intent = intent_match.group(1) if intent_match else "unknown"
+        
+        return {"intent": intent}
+
+    def _analyze_query(self, query):
+        """Analyze user query using AI with database context."""
+        # Get available categories and payees from database
+        db_context = self._get_database_context()
+        
+        prompt = self._create_analysis_prompt(query, db_context)
         output = self._call_llm(prompt)
         
-        # Extract and parse JSON
-        json_start = output.find('{')
-        json_end = output.rfind('}') + 1
-        if json_start >= 0 and json_end > json_start:
-            try:
-                result = json.loads(output[json_start:json_end])
-                
-                # Fallback transaction type detection if LLM missed it
-                if not result.get('transaction_type'):
-                    query_lower = query.lower()
-                    if any(word in query_lower for word in ['expense', 'expenses', 'spent', 'spending', 'paid', 'cost', 'bill', 'purchase']):
-                        result['transaction_type'] = 'expense'
-                    elif any(word in query_lower for word in ['income', 'earned', 'salary', 'revenue', 'received', 'deposit']):
-                        result['transaction_type'] = 'income'
-                    elif 'transfer' in query_lower:
-                        result['transaction_type'] = 'transfer'
-                
-                return result
-            except json.JSONDecodeError:
-                pass
-                
-        # Fallback default with transaction type detection
-        result = {
-            'intent': 'search', 'time_period': None, 'custom_date': None, 'categories': [],
-            'payees': [], 'projects': [], 'amount_filter': None, 'transaction_type': None
-        }
+        # Extract and parse JSON using shared function
+        result = self.extract_json_from_response(output)
         
-        # Fallback transaction type detection
-        query_lower = query.lower()
-        if any(word in query_lower for word in ['expense', 'expenses', 'spent', 'spending', 'paid', 'cost', 'bill', 'purchase']):
-            result['transaction_type'] = 'expense'
-        elif any(word in query_lower for word in ['income', 'earned', 'salary', 'revenue', 'received', 'deposit']):
-            result['transaction_type'] = 'income'
-        elif 'transfer' in query_lower:
-            result['transaction_type'] = 'transfer'
+        # Fallback transaction type detection if LLM missed it
+        if not result.get('transaction_type'):
+            query_lower = query.lower()
+            if any(word in query_lower for word in ['expense', 'expenses', 'spent', 'spending', 'paid', 'cost', 'bill', 'purchase']):
+                result['transaction_type'] = 'expense'
+            elif any(word in query_lower for word in ['income', 'earned', 'salary', 'revenue', 'received', 'deposit']):
+                result['transaction_type'] = 'income'
+            elif 'transfer' in query_lower:
+                result['transaction_type'] = 'transfer'
+        
+        # If extraction failed, provide fallback default
+        if result == {"intent": "unknown"}:
+            result = {
+                'intent': 'search', 'time_period': None, 'custom_date': None, 'categories': [],
+                'payees': [], 'projects': [], 'amount_filter': None, 'transaction_type': None
+            }
             
+            # Fallback transaction type detection
+            query_lower = query.lower()
+            if any(word in query_lower for word in ['expense', 'expenses', 'spent', 'spending', 'paid', 'cost', 'bill', 'purchase']):
+                result['transaction_type'] = 'expense'
+            elif any(word in query_lower for word in ['income', 'earned', 'salary', 'revenue', 'received', 'deposit']):
+                result['transaction_type'] = 'income'
+            elif 'transfer' in query_lower:
+                result['transaction_type'] = 'transfer'
+                
         return result
     
     def _get_database_context(self):
@@ -462,12 +582,7 @@ Return JSON:
         for tx in top_transactions:
             top_tx_context.append(f"£{abs(tx['amount']):.2f} to {tx['payee'] or 'Unknown'} on {tx['date']}")
         
-        summary_prompt = f"""Answer user's financial question:
-Question: "{user_query}"
-Found {count} transactions, total £{total:.2f}
-Top amounts: {'; '.join(top_tx_context[:2])}
-
-Provide short direct answer:"""
+        summary_prompt = self._create_summary_prompt(user_query, count, total, top_transactions)
         
         try:
             ai_output = self._call_llm(summary_prompt)
@@ -481,34 +596,81 @@ Provide short direct answer:"""
     
     def check_model_status(self):
         """Check model download status."""
-        exists = os.path.exists(self.model_path) and os.path.isdir(self.model_path)
-        loaded = self.model is not None
-        
-        if exists:
-            files = os.listdir(self.model_path)
-            has_config = any('config.json' in f for f in files)
-            has_model = any(f.endswith(('.bin', '.safetensors')) for f in files)
-            ready = has_config and has_model and loaded
-        else:
-            ready = False
-        
-        return {
-            'downloaded': ready,
-            'model_name': self.model_name,
-            'model_path': self.model_path
-        }
+        try:
+            model_path = self._get_model_path()
+            model_source = self._config.get('model_source', 'download')
+            
+            if not model_path:
+                return {
+                    'downloaded': False,
+                    'error': 'No model path configured',
+                    'model_source': model_source
+                }
+            
+            exists = os.path.exists(model_path) and os.path.isdir(model_path)
+            loaded = self.model is not None
+            
+            if exists:
+                files = os.listdir(model_path)
+                has_config = any('config.json' in f for f in files)
+                has_model = any(f.endswith(('.bin', '.safetensors')) for f in files)
+                ready = has_config and has_model and loaded
+            else:
+                ready = False
+            
+            result = {
+                'downloaded': ready,
+                'model_source': model_source,
+                'model_path': model_path
+            }
+            
+            if model_source == 'download':
+                result['model_name'] = self._config.get('model_name', self.default_model_name)
+            elif model_source == 'local-path':
+                result['local_model_path'] = self._config.get('local_model_path', '')
+                
+            if not ready and exists and not loaded:
+                result['error'] = 'Model files exist but failed to load. Check path and file permissions.'
+            elif not ready and not exists:
+                if model_source == 'local-path':
+                    result['error'] = f'Model directory does not exist: {model_path}'
+                else:
+                    result['error'] = 'Model not downloaded'
+            
+            return result
+            
+        except Exception as e:
+            return {
+                'downloaded': False,
+                'error': f'Error checking model status: {str(e)}',
+                'model_source': self._config.get('model_source', 'download')
+            }
     
-    def download_model(self, progress_callback=None):
+    def download_model(self, model_name=None, progress_callback=None):
         """Download the AI model."""
         try:
+            # Use provided model name or get from config
+            if model_name:
+                # Update config with new model name
+                self._config['model_name'] = model_name
+                self._config['model_source'] = 'download'
+                # Save updated config
+                config_path = os.path.expanduser("~/.local/share/MoneyTracker/ai_config.json")
+                with open(config_path, 'w') as f:
+                    json.dump(self._config, f)
+            else:
+                model_name = self._config.get('model_name', self.default_model_name)
+            
+            model_path = self._get_model_path()
+            
             if progress_callback:
-                progress_callback.update({'status': 'downloading', 'progress': 10, 'message': 'Starting download...'})
+                progress_callback.update({'status': 'downloading', 'progress': 10, 'message': f'Starting download of {model_name}...'})
             
             from huggingface_hub import snapshot_download
             
             snapshot_download(
-                repo_id=self.model_name,
-                local_dir=self.model_path,
+                repo_id=model_name,
+                local_dir=model_path,
                 local_dir_use_symlinks=False
             )
             
@@ -516,7 +678,7 @@ Provide short direct answer:"""
                 progress_callback.update({'progress': 90, 'message': 'Verifying files...'})
             
             # Verify download
-            files = os.listdir(self.model_path)
+            files = os.listdir(model_path)
             has_config = any('config.json' in f for f in files)
             has_model = any(f.endswith(('.bin', '.safetensors')) for f in files)
             
@@ -524,6 +686,7 @@ Provide short direct answer:"""
                 if progress_callback:
                     progress_callback.update({'progress': 100, 'status': 'completed', 'message': 'Download complete!'})
                 
+                # Reload the model
                 self._load_model()
                 return True
             else:

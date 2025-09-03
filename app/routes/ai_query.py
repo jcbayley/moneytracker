@@ -54,12 +54,16 @@ def download_model():
         if download_progress['status'] == 'downloading':
             return jsonify({'message': 'Download already in progress'}), 200
         
+        # Get model name from request
+        data = request.get_json() or {}
+        model_name = data.get('model_name')
+        
         # Reset progress
         download_progress = {'progress': 0, 'status': 'downloading', 'message': 'Starting download...'}
         
         # Start download in background thread
         ai_service = ai_query.AIQueryService()
-        thread = threading.Thread(target=ai_service.download_model, args=(download_progress,))
+        thread = threading.Thread(target=ai_service.download_model, args=(model_name, download_progress))
         thread.daemon = True
         thread.start()
         
@@ -136,8 +140,19 @@ def save_ai_config():
         import json
         config_path = os.path.expanduser("~/.local/share/MoneyTracker/ai_config.json")
         
+        os.makedirs(os.path.dirname(config_path), exist_ok=True)
+        
         with open(config_path, 'w') as f:
             json.dump(data, f)
+        
+        # If this is a local model configuration change, reload the model
+        if data.get('type') == 'local' and data.get('model_source') == 'local-path':
+            try:
+                ai_service = ai_query.AIQueryService()
+                ai_service.reload_model()
+            except Exception as e:
+                # Log error but don't fail the config save
+                print(f"Warning: Failed to reload model after config change: {e}")
         
         return jsonify({'success': True})
     except Exception as e:
@@ -156,8 +171,18 @@ def get_ai_config():
                 config = json.load(f)
             return jsonify(config)
         else:
-            return jsonify({'type': 'local'})  # Default to local
+            # Default configuration
+            return jsonify({
+                'type': 'local',
+                'model_source': 'download',
+                'model_name': 'Qwen/Qwen2.5-3B'
+            })
     except Exception as e:
-        return jsonify({'type': 'local'}), 200  # Default fallback
+        # Default fallback
+        return jsonify({
+            'type': 'local',
+            'model_source': 'download', 
+            'model_name': 'Qwen/Qwen2.5-3B'
+        }), 200
 
 

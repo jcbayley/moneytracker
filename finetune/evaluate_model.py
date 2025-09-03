@@ -10,12 +10,18 @@ import torch
 import json
 import argparse
 import re
+import sys
+import os
 from typing import Dict, List, Tuple
 from dataclasses import dataclass
 from transformers import AutoTokenizer, AutoModelForCausalLM, pipeline
 from peft import PeftModel
 import difflib
 from collections import Counter
+
+# Add the parent directory to sys.path to import from app
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from app.models.ai_query import AIQueryService
 
 @dataclass
 class EvaluationResult:
@@ -92,27 +98,12 @@ class ModelEvaluator:
     
     def create_evaluation_prompt(self, test_case: Dict) -> str:
         """Create evaluation prompt matching training format"""
-        return f"User Query: {test_case['query']}\n\nAnalysis:"
+        # Use the exact prompt from the test case
+        return test_case['prompt']
     
     def extract_analysis_from_response(self, response: str) -> Dict:
-        """Extract JSON analysis from model response"""
-        try:
-            # Look for JSON-like structure
-            json_match = re.search(r'\{[^}]*\}', response, re.DOTALL)
-            if json_match:
-                json_str = json_match.group(0)
-                # Clean up common issues
-                json_str = re.sub(r'([{,]\s*)(\w+):', r'\1"\2":', json_str)  # Quote keys
-                json_str = re.sub(r':\s*([^",\[\]{}]+)([,}])', r': "\1"\2', json_str)  # Quote values
-                return json.loads(json_str)
-        except:
-            pass
-        
-        # Fallback: extract intent manually
-        intent_match = re.search(r'intent["\']?\s*:\s*["\']?(\w+)["\']?', response, re.IGNORECASE)
-        intent = intent_match.group(1) if intent_match else "unknown"
-        
-        return {"intent": intent}
+        """Extract JSON analysis from model response using shared function"""
+        return AIQueryService.extract_json_from_response(response)
     
     def score_analysis_accuracy(self, predicted: Dict, expected: Dict) -> Dict[str, float]:
         """Score how well the analysis matches expected output"""
@@ -139,17 +130,60 @@ class ModelEvaluator:
         else:
             scores['payees'] = 1.0 if not pred_payees else 0.5
         
-        # Time period accuracy
-        pred_time = predicted.get('time_period', '').lower()
-        exp_time = expected.get('time_period', '').lower()
-        scores['time_period'] = 1.0 if pred_time == exp_time else 0.0
+        # Time period accuracy (handle None values)
+        pred_time = predicted.get('time_period')
+        exp_time = expected.get('time_period')
+        pred_time_str = pred_time.lower() if pred_time else ''
+        exp_time_str = exp_time.lower() if exp_time else ''
+        scores['time_period'] = 1.0 if pred_time_str == exp_time_str else 0.0
         
-        # Transaction type accuracy
-        pred_type = predicted.get('transaction_type', '').lower()
-        exp_type = expected.get('transaction_type', '').lower()
-        scores['transaction_type'] = 1.0 if pred_type == exp_type else 0.0
+        # Transaction type accuracy (handle None values)
+        pred_type = predicted.get('transaction_type')
+        exp_type = expected.get('transaction_type')
+        pred_type_str = pred_type.lower() if pred_type else ''
+        exp_type_str = exp_type.lower() if exp_type else ''
+        scores['transaction_type'] = 1.0 if pred_type_str == exp_type_str else 0.0
         
         return scores
+    
+    def score_text_similarity(self, response: str, expected: str) -> float:
+        """Score text similarity for summary tasks"""
+        if not response or not expected:
+            return 0.0
+        
+        # Simple similarity scoring based on key phrases and numbers
+        response_clean = response.lower().strip()
+        expected_clean = expected.lower().strip()
+        
+        # Exact match gets perfect score
+        if response_clean == expected_clean:
+            return 1.0
+        
+        # Score based on key elements present
+        score = 0.0
+        
+        # Check for currency amounts
+        import re
+        response_amounts = re.findall(r'£[\d,]+\.?\d*', response)
+        expected_amounts = re.findall(r'£[\d,]+\.?\d*', expected)
+        if response_amounts and expected_amounts:
+            # Check if main amount is present
+            if any(amt in response_clean for amt in [amt.lower() for amt in expected_amounts]):
+                score += 0.4
+        
+        # Check for key action words
+        key_words = ['spent', 'received', 'earned', 'found', 'largest', 'biggest', 'transactions']
+        matching_words = sum(1 for word in key_words if word in response_clean and word in expected_clean)
+        score += (matching_words / len(key_words)) * 0.3
+        
+        # Check for transaction count mentions
+        response_counts = re.findall(r'\b\d+\s+transactions?\b', response_clean)
+        expected_counts = re.findall(r'\b\d+\s+transactions?\b', expected_clean)
+        if response_counts and expected_counts:
+            if any(count in response_clean for count in expected_counts):
+                score += 0.3
+        
+        return min(score, 1.0)
     
     def score_sql_accuracy(self, response: str, expected_contains: List[str]) -> float:
         """Score SQL generation accuracy based on expected keywords"""
@@ -222,21 +256,58 @@ class ModelEvaluator:
         # Generate responses from both models
         base_response = self.generate_response(prompt, use_finetuned=False)
         finetuned_response = self.generate_response(prompt, use_finetuned=True) if self.finetuned_pipeline else ""
+
+        print("base response", base_response)
+        print("============================")
+        print("finetuned response", finetuned_response)
+        print("================================")
         
-        # Extract and score analysis
-        base_analysis = self.extract_analysis_from_response(base_response)
-        finetuned_analysis = self.extract_analysis_from_response(finetuned_response) if finetuned_response else {}
+        # Handle different task types
+        task_type = test_case.get('task_type', 'analysis')  # Default to analysis for backward compatibility
         
-        base_analysis_scores = self.score_analysis_accuracy(base_analysis, test_case['expected_analysis'])
-        finetuned_analysis_scores = self.score_analysis_accuracy(finetuned_analysis, test_case['expected_analysis']) if finetuned_response else {}
-        
-        # Score SQL accuracy
-        base_sql_score = self.score_sql_accuracy(base_response, test_case['expected_sql_contains'])
-        finetuned_sql_score = self.score_sql_accuracy(finetuned_response, test_case['expected_sql_contains']) if finetuned_response else 0.0
-        
-        # Score summary accuracy
-        base_summary_score = self.score_summary_accuracy(base_response, test_case['expected_summary_contains'])
-        finetuned_summary_score = self.score_summary_accuracy(finetuned_response, test_case['expected_summary_contains']) if finetuned_response else 0.0
+        if task_type == 'analysis':
+            # Analysis task: compare JSON output
+            base_analysis = self.extract_analysis_from_response(base_response)
+            finetuned_analysis = self.extract_analysis_from_response(finetuned_response) if finetuned_response else {}
+            print("base analysis", base_analysis)
+            print("---------------------------")
+            print("finetuned analysis", finetuned_analysis)
+            print("-----------------------------")
+
+            base_analysis_scores = self.score_analysis_accuracy(base_analysis, test_case['expected_analysis'])
+            finetuned_analysis_scores = self.score_analysis_accuracy(finetuned_analysis, test_case['expected_analysis']) if finetuned_response else {}
+            
+            # For analysis tasks, SQL and summary scores are not applicable
+            base_sql_score = 1.0  # Assume perfect since not testing SQL generation
+            finetuned_sql_score = 1.0
+            base_summary_score = 1.0  # Assume perfect since not testing summary generation
+            finetuned_summary_score = 1.0
+            
+        elif task_type == 'summary':
+            # Summary task: compare natural language output
+            base_analysis_scores = {}  # Not applicable for summary tasks
+            finetuned_analysis_scores = {}
+            base_sql_score = 1.0  # Not applicable
+            finetuned_sql_score = 1.0
+            
+            # Score summary accuracy by comparing with expected response
+            expected_response = test_case.get('expected_response', '')
+            base_summary_score = self.score_text_similarity(base_response, expected_response)
+            finetuned_summary_score = self.score_text_similarity(finetuned_response, expected_response) if finetuned_response else 0.0
+            
+        else:
+            # Fallback to old format for backward compatibility
+            base_analysis = self.extract_analysis_from_response(base_response)
+            finetuned_analysis = self.extract_analysis_from_response(finetuned_response) if finetuned_response else {}
+            
+            base_analysis_scores = self.score_analysis_accuracy(base_analysis, test_case.get('expected_analysis', {}))
+            finetuned_analysis_scores = self.score_analysis_accuracy(finetuned_analysis, test_case.get('expected_analysis', {})) if finetuned_response else {}
+            
+            base_sql_score = self.score_sql_accuracy(base_response, test_case.get('expected_sql_contains', []))
+            finetuned_sql_score = self.score_sql_accuracy(finetuned_response, test_case.get('expected_sql_contains', [])) if finetuned_response else 0.0
+            
+            base_summary_score = self.score_summary_accuracy(base_response, test_case.get('expected_summary_contains', []))
+            finetuned_summary_score = self.score_summary_accuracy(finetuned_response, test_case.get('expected_summary_contains', [])) if finetuned_response else 0.0
         
         # Calculate overall scores
         base_overall = self.calculate_overall_score(base_analysis_scores, base_sql_score, base_summary_score)

@@ -2,12 +2,14 @@
 import torch
 import platform
 import sys
+import os
 from transformers import (
     AutoModelForCausalLM, 
     AutoTokenizer, 
     TrainingArguments,
     Trainer,
-    DataCollatorForLanguageModeling
+    DataCollatorForLanguageModeling,
+    TrainerCallback
 )
 from peft import (
     LoraConfig, 
@@ -18,6 +20,34 @@ from datasets import Dataset
 import json
 import argparse
 from typing import Dict, List
+
+class ProgressCallback(TrainerCallback):
+    """Custom callback to show training progress clearly."""
+    
+    def __init__(self, total_steps):
+        self.total_steps = total_steps
+        self.start_time = None
+    
+    def on_train_begin(self, args, state, control, **kwargs):
+        import time
+        self.start_time = time.time()
+        print(f"🚀 Training started - {self.total_steps} total steps")
+    
+    def on_log(self, args, state, control, logs=None, **kwargs):
+        if logs is not None and 'loss' in logs:
+            import time
+            elapsed = time.time() - self.start_time if self.start_time else 0
+            progress = (state.global_step / self.total_steps) * 100
+            
+            print(f"Step {state.global_step:4d}/{self.total_steps} ({progress:5.1f}%) | "
+                  f"Loss: {logs['loss']:.4f} | "
+                  f"LR: {logs.get('learning_rate', 0):.2e} | "
+                  f"Elapsed: {elapsed/60:.1f}m")
+    
+    def on_train_end(self, args, state, control, **kwargs):
+        import time
+        elapsed = time.time() - self.start_time if self.start_time else 0
+        print(f"✅ Training completed in {elapsed/60:.1f} minutes")
 
 # Check available hardware and libraries
 def check_environment():
@@ -60,9 +90,13 @@ def setup_device_and_dtype(env_info):
     
     return device, torch_dtype
 
-def setup_model_and_tokenizer(model_name: str, lora_rank: int = 16, use_quantization: bool = False):
+def setup_model_and_tokenizer(model_name: str, lora_rank: int = 32, lora_alpha: int = 64, 
+                               lora_dropout: float = 0.1, use_quantization: bool = False, 
+                               continue_from: str = None):
     """
     Setup model with LoRA adapters, with quantization if available
+    Args:
+        continue_from: Path to existing LoRA checkpoint to continue training from
     """
     env_info = check_environment()
     device, torch_dtype = setup_device_and_dtype(env_info)
@@ -132,15 +166,31 @@ def setup_model_and_tokenizer(model_name: str, lora_rank: int = 16, use_quantiza
     
     lora_config = LoraConfig(
         r=lora_rank,
-        lora_alpha=32,
+        lora_alpha=lora_alpha,
         target_modules=target_modules,
-        lora_dropout=0.1,
+        lora_dropout=lora_dropout,
         bias="none",
         task_type=TaskType.CAUSAL_LM,
     )
     
-    # Add LoRA adapters
-    model = get_peft_model(model, lora_config)
+    # Add LoRA adapters or load existing ones
+    if continue_from and os.path.exists(continue_from):
+        print(f"🔄 Loading existing LoRA adapters from {continue_from}")
+        from peft import PeftModel
+        try:
+            # Load existing PEFT model
+            model = PeftModel.from_pretrained(model, continue_from)
+            print("✅ Successfully loaded existing LoRA adapters")
+        except Exception as e:
+            print(f"⚠️  Failed to load existing LoRA adapters: {e}")
+            print("🔄 Creating new LoRA adapters instead")
+            model = get_peft_model(model, lora_config)
+    else:
+        if continue_from:
+            print(f"⚠️  Continue-from path not found: {continue_from}")
+            print("🔄 Creating new LoRA adapters instead")
+        model = get_peft_model(model, lora_config)
+    
     model.print_trainable_parameters()
     
     return model, tokenizer, device, torch_dtype
@@ -192,8 +242,12 @@ def main():
                        help='Path to training data (JSONL format)')
     parser.add_argument('--output', type=str, default='./lora-output',
                        help='Output directory for trained model')
-    parser.add_argument('--rank', type=int, default=16,
-                       help='LoRA rank (lower = less memory)')
+    parser.add_argument('--rank', type=int, default=32,
+                       help='LoRA rank (lower = less memory, higher = more trainable parameters)')
+    parser.add_argument('--lora-alpha', type=int, default=64,
+                       help='LoRA alpha parameter (scaling factor)')
+    parser.add_argument('--lora-dropout', type=float, default=0.1,
+                       help='LoRA dropout rate')
     parser.add_argument('--epochs', type=int, default=3,
                        help='Number of training epochs')
     parser.add_argument('--batch-size', type=int, default=1,
@@ -206,6 +260,10 @@ def main():
                        help='Use 4-bit quantization (if available)')
     parser.add_argument('--cpu-only', action='store_true',
                        help='Force CPU-only training')
+    parser.add_argument('--continue-from', type=str, default=None,
+                       help='Path to existing LoRA checkpoint to continue training from (e.g., ./lora-output)')
+    parser.add_argument('--logging-steps', type=int, default=10,
+                       help='Logging frequency in steps')
     
     args = parser.parse_args()
     
@@ -216,8 +274,10 @@ def main():
         print("🔧 Forcing CPU-only mode")
     
     print(f"Setting up LoRA fine-tuning for {args.model}")
-    print(f"LoRA rank: {args.rank}")
+    print(f"LoRA rank: {args.rank} (alpha: {args.lora_alpha}, dropout: {args.lora_dropout})")
     print(f"Training data: {args.data}")
+    if args.continue_from:
+        print(f"Continuing from checkpoint: {args.continue_from}")
     
     # Check environment
     env_info = check_environment()
@@ -226,7 +286,8 @@ def main():
     # Setup model and tokenizer
     try:
         model, tokenizer, device, torch_dtype = setup_model_and_tokenizer(
-            args.model, args.rank, args.quantize and not args.cpu_only
+            args.model, args.rank, args.lora_alpha, args.lora_dropout, 
+            args.quantize and not args.cpu_only, args.continue_from
         )
     except Exception as e:
         print(f"❌ Model setup failed: {e}")
@@ -260,8 +321,8 @@ def main():
         gradient_accumulation_steps=gradient_accumulation_steps,
         learning_rate=args.lr,
         num_train_epochs=args.epochs,
-        logging_steps=10,
-        save_steps=500,
+        logging_steps=args.logging_steps,
+        save_steps=args.logging_steps * 10,  # Save checkpoints every 10x logging frequency
         save_strategy="steps",
         eval_strategy="no",
         warmup_steps=100,
@@ -270,6 +331,8 @@ def main():
         report_to="none",
         dataloader_num_workers=dataloader_num_workers,
         dataloader_pin_memory=False,
+        logging_first_step=True,  # Log the first step
+        logging_nan_inf_filter=False,  # Show NaN/Inf in logs
         
         # Device-specific optimizations  
         fp16=(torch_dtype == torch.float16 and device == "cuda"),  # Only use fp16 on CUDA
@@ -282,15 +345,23 @@ def main():
     
     print(f"Training arguments: batch_size={args.batch_size}, "
           f"grad_accum={gradient_accumulation_steps}, "
-          f"effective_batch_size={args.batch_size * gradient_accumulation_steps}")
+          f"effective_batch_size={args.batch_size * gradient_accumulation_steps}, "
+          f"logging_steps={args.logging_steps}")
     
-    # Initialize trainer
+    total_steps = len(train_dataset) * args.epochs // (args.batch_size * gradient_accumulation_steps)
+    print(f"Total training steps: {total_steps}")
+    print(f"Loss will be logged every {args.logging_steps} steps")
+    print(f"Checkpoints saved every {args.logging_steps * 10} steps")
+    
+    # Initialize trainer with progress callback
+    progress_callback = ProgressCallback(total_steps)
     trainer = Trainer(
         model=model,
         args=training_args,
         train_dataset=train_dataset,
         tokenizer=tokenizer,
         data_collator=data_collator,
+        callbacks=[progress_callback],
     )
     
     # Clear cache before training
@@ -299,25 +370,28 @@ def main():
     elif device == "mps":
         torch.mps.empty_cache()
     
-    print("🚀 Starting training...")
-    print(f"Expected time: {len(train_dataset) * args.epochs // (args.batch_size * gradient_accumulation_steps)} steps")
-    
     try:
         trainer.train()
-        print("✅ Training completed successfully!")
+        
+        # Save the final model
+        print(f"💾 Saving final model to {args.output}")
+        trainer.save_model()
+        tokenizer.save_pretrained(args.output)
+        
+        # Show final training metrics
+        if trainer.state.log_history:
+            final_loss = trainer.state.log_history[-1].get('train_loss', 'N/A')
+            print(f"📊 Final training loss: {final_loss}")
+        
+        print("🎉 Training complete!")
+        print(f"📁 Model saved to: {args.output}")
+        print(f"🔧 To continue training: --continue-from {args.output}")
+        print(f"💡 To test: Use the saved model in your AI query settings")
+        
     except Exception as e:
         print(f"❌ Training failed: {e}")
         print("💡 Try reducing --batch-size, --rank, or --max-length")
         sys.exit(1)
-    
-    # Save the final model
-    print(f"Saving model to {args.output}")
-    trainer.save_model()
-    tokenizer.save_pretrained(args.output)
-    
-    print("🎉 Training complete!")
-    print(f"📁 Model saved to: {args.output}")
-    print(f"🔧 To use: Load LoRA adapters from {args.output}")
 
 if __name__ == "__main__":
     main()

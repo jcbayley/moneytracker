@@ -164,6 +164,12 @@ const AIQueryComponent = {
     },
 
     async downloadModel() {
+        const modelName = document.getElementById('model-name-input').value.trim();
+        if (!modelName) {
+            UI.showNotification('Please enter a model name', 'error');
+            return;
+        }
+
         const downloadBtn = document.getElementById('download-model-btn');
         const progressDiv = document.getElementById('download-progress');
         const progressBar = document.getElementById('progress-bar');
@@ -175,7 +181,11 @@ const AIQueryComponent = {
             progressDiv.classList.remove('hidden');
             progressText.textContent = 'Initializing download...';
             
-            const response = await fetch('/api/ai/model/download', { method: 'POST' });
+            const response = await fetch('/api/ai/model/download', { 
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ model_name: modelName })
+            });
             
             if (!response.ok) {
                 throw new Error(`Download failed: ${response.statusText}`);
@@ -281,9 +291,18 @@ const AIQueryComponent = {
             localRadio.addEventListener('change', () => this.switchModelType('local'));
             apiRadio.addEventListener('change', () => this.switchModelType('api'));
         }
+
+        // Setup model source switching
+        const downloadRadio = document.getElementById('model-source-download');
+        const localPathRadio = document.getElementById('model-source-local');
         
-        // Check model status on load (silently - don't show error popup)
-        this.checkModelStatus(false);
+        if (downloadRadio && localPathRadio) {
+            downloadRadio.addEventListener('change', () => this.switchModelSource('download'));
+            localPathRadio.addEventListener('change', () => this.switchModelSource('local-path'));
+        }
+        
+        // Load configuration and check model status on load
+        this.loadConfiguration();
     },
 
     switchModelType(type) {
@@ -388,6 +407,158 @@ const AIQueryComponent = {
             .catch(() => {
                 // No existing config, that's fine
             });
+    },
+
+    switchModelSource(source) {
+        const downloadConfig = document.getElementById('download-model-config');
+        const localPathConfig = document.getElementById('local-path-model-config');
+        
+        if (source === 'download') {
+            downloadConfig.classList.remove('hidden');
+            localPathConfig.classList.add('hidden');
+        } else {
+            downloadConfig.classList.add('hidden');
+            localPathConfig.classList.remove('hidden');
+            this.loadLocalModelConfig();
+        }
+    },
+
+    async saveLocalModelConfig() {
+        const modelPath = document.getElementById('local-model-path').value.trim();
+        const statusSpan = document.getElementById('local-model-status');
+        
+        if (!modelPath) {
+            statusSpan.textContent = 'Please enter a model path';
+            statusSpan.style.color = '#dc3545';
+            return;
+        }
+        
+        try {
+            const response = await fetch('/api/ai/save-config', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    type: 'local',
+                    model_source: 'local-path',
+                    local_model_path: modelPath
+                })
+            });
+            
+            if (response.ok) {
+                statusSpan.textContent = 'Configuration saved - checking model...';
+                statusSpan.style.color = '#28a745';
+                
+                // Check if the model loads successfully
+                setTimeout(() => this.checkLocalModelStatus(), 1000);
+            } else {
+                statusSpan.textContent = 'Failed to save configuration';
+                statusSpan.style.color = '#dc3545';
+            }
+        } catch (error) {
+            statusSpan.textContent = `Error: ${error.message}`;
+            statusSpan.style.color = '#dc3545';
+        }
+    },
+
+    async checkLocalModelStatus() {
+        const statusSpan = document.getElementById('local-model-status');
+        
+        try {
+            const response = await fetch('/api/ai/model/status');
+            const result = await response.json();
+            
+            if (result.downloaded && result.model_source === 'local-path') {
+                statusSpan.textContent = 'Model loaded successfully';
+                statusSpan.style.color = '#28a745';
+                
+                // Enable AI query button
+                const queryBtn = document.getElementById('ai-query-btn');
+                if (queryBtn) {
+                    queryBtn.disabled = false;
+                    queryBtn.title = '';
+                }
+            } else if (result.error) {
+                statusSpan.textContent = `Error: ${result.error}`;
+                statusSpan.style.color = '#dc3545';
+            } else {
+                statusSpan.textContent = 'Model not loaded';
+                statusSpan.style.color = '#dc3545';
+            }
+        } catch (error) {
+            statusSpan.textContent = `Error checking status: ${error.message}`;
+            statusSpan.style.color = '#dc3545';
+        }
+    },
+
+    loadLocalModelConfig() {
+        // Load saved local model configuration
+        fetch('/api/ai/get-config')
+            .then(response => response.json())
+            .then(config => {
+                if (config.type === 'local' && config.model_source === 'local-path') {
+                    document.getElementById('local-model-path').value = config.local_model_path || '';
+                    this.checkLocalModelStatus();
+                }
+            })
+            .catch(() => {
+                // No existing config, that's fine
+            });
+    },
+
+    loadConfiguration() {
+        // Load and apply saved configuration
+        fetch('/api/ai/get-config')
+            .then(response => response.json())
+            .then(config => {
+                // Set model type (local vs API)
+                const localRadio = document.getElementById('model-type-local');
+                const apiRadio = document.getElementById('model-type-api');
+                
+                if (config.type === 'api') {
+                    if (apiRadio) {
+                        apiRadio.checked = true;
+                        this.switchModelType('api');
+                    }
+                } else {
+                    if (localRadio) {
+                        localRadio.checked = true;
+                        this.switchModelType('local');
+                    }
+                }
+
+                // For local models, set model source
+                if (config.type === 'local') {
+                    const downloadRadio = document.getElementById('model-source-download');
+                    const localPathRadio = document.getElementById('model-source-local');
+                    
+                    if (config.model_source === 'local-path') {
+                        if (localPathRadio) {
+                            localPathRadio.checked = true;
+                            this.switchModelSource('local-path');
+                        }
+                        // Load local path
+                        if (config.local_model_path) {
+                            document.getElementById('local-model-path').value = config.local_model_path;
+                        }
+                    } else {
+                        if (downloadRadio) {
+                            downloadRadio.checked = true;
+                            this.switchModelSource('download');
+                        }
+                        // Load model name
+                        if (config.model_name) {
+                            document.getElementById('model-name-input').value = config.model_name;
+                        }
+                    }
+                }
+
+                // Check model status after configuration is loaded
+                setTimeout(() => this.checkModelStatus(false), 500);
+            })
+            .catch(() => {
+                // No existing config, check with defaults
+                this.checkModelStatus(false);
+            });
     }
 };
 
@@ -396,6 +567,8 @@ window.downloadModel = () => AIQueryComponent.downloadModel();
 window.checkModelStatus = () => AIQueryComponent.checkModelStatus();
 window.testApiConnection = () => AIQueryComponent.testApiConnection();
 window.saveApiConfig = () => AIQueryComponent.saveApiConfig();
+window.saveLocalModelConfig = () => AIQueryComponent.saveLocalModelConfig();
+window.checkLocalModelStatus = () => AIQueryComponent.checkLocalModelStatus();
 
 // Global functions for HTML handlers
 window.submitAIQuery = () => AIQueryComponent.submitQuery();
