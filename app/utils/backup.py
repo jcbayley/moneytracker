@@ -31,6 +31,10 @@ class BackupManager:
         self._stop_event = threading.Event()
         self._backup_thread = None
     
+    def __repr__(self):
+        """Return string representation of BackupManager."""
+        return f"BackupManager(db_path='{self.db_path}', backup_dir='{self.backup_dir}')"
+    
     def create_backup(self, custom_name=None):
         """Create a single backup of the database."""
         if not os.path.exists(self.db_path):
